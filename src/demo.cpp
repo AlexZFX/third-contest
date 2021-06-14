@@ -1,52 +1,101 @@
 #include <iostream>
-#include <string>
 #include <fstream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <getopt.h>
+#include "Common.h"
+#include "Util.h"
+#include "Table.h"
+#include "DtsConf.h"
 
 using namespace std;
 
 /**
  * @author dts，just for demo.
  */
-const string DATABASE_NAME = "tianchi_dts_data";                                                             // 待处理数据库名，无需修改
-const string SCHEMA_FILE_DIR = "schema_info_dir";                                                            // schema文件夹，无需修改。
-const string SCHEMA_FILE_NAME = "schema.info";                                                               // schema文件名，无需修改。
-const string SOURCE_FILE_DIR = "source_file_dir";                                                            // 输入文件夹，无需修改。
-const string SINK_FILE_DIR = "sink_file_dir";                                                                // 输出文件夹，无需修改。
-const string SOURCE_FILE_NAME_TEMPLATE = "tianchi_dts_source_data_";                                         // 输入文件名，无需修改。
-const string SINK_FILE_NAME_TEMPLATE = "tianchi_dts_sink_data_";                                             // 输出文件名模板，无需修改。
-const string CHECK_TABLE_SETS = "customer,district,item,new_orders,order_line,orders,stock,warehouse";       // 待处理表集合，无需修改。
-
 class Demo {
-    public:
-    string sourceDirectory;
-    string sinkDirectory;
+public:
+  string sourceDirectory;
+  string sinkDirectory;
 
-    public:
-    void initialSchemaInfo(string path, string tables) {
-        cout << "Read schema_info_dir/schema.info file and construct table in memory." << endl;
-        return;
-    }
+  vector<string> m_loadFiles;
+  unordered_map<string, Table> m_tables;
 
-    void loadSourceData(string path) {
-        cout << "Read source_file_dir/tianchi_dts_source_data_* file" << endl;
-        return;
-    }
-    
-    void cleanData() {
-        cout << "Clean and sort the source data." << endl;
-        return;
-    }
+public:
+  void initialSchemaInfo(string path, string tables) {
+    cout << "Read schema_info_dir/schema.info file and construct table in memory." << endl;
 
-    void sinkData(string path) {
-        cout << "Sink the data." << endl;
-        return;
-    }
+    return;
+  }
+
+  void loadSourceData(const string &path) {
+    cout << "Read source_file_dir/tianchi_dts_source_data_* file" << endl;
+    // 获取对应路径下所有文件名
+    getFileNames(path, m_loadFiles);
+    return;
+  }
+
+  void cleanData() {
+    cout << "Clean and sort the source data." << endl;
+    return;
+  }
+
+  void sinkData(const string path) {
+    cout << "Sink the data." << endl;
+    return;
+  }
 };
+
+DtsConf g_conf;
+
+/**
+ * 初始化参数
+ * @param argc
+ * @param argv
+ */
+void initArg(int argc, char *argv[]) {
+  int opt;
+  int opt_index;
+  static struct option long_options[] = {
+    {"input_dir",        required_argument, nullptr, 'i'},
+    {"output_dir",       required_argument, nullptr, 'o'},
+    {"output_db_url",    required_argument, nullptr, 'r'},
+    {"output_db_user",   required_argument, nullptr, 'u'},
+    {"output_db_passwd", required_argument, nullptr, 'p'},
+    {nullptr, 0,                            nullptr, 0}
+  };
+  while (-1 != (opt = getopt_long(argc, argv, "", long_options, &opt_index))) {
+    switch (opt) {
+      case 'i' : {
+        g_conf.inputDir = optarg;
+        break;
+      }
+      case 'o' : {
+        g_conf.outputDir = optarg;
+        break;
+      }
+      case 'r': {
+        g_conf.outputDbUrl = optarg;
+        break;
+      }
+      case 'u': {
+        g_conf.outputDbUser = optarg;
+        break;
+      }
+      case 'p': {
+        g_conf.outputDbPass = optarg;
+        break;
+      }
+      default: {
+        cerr << "error conf" << endl;
+        break;
+      }
+    }
+  }
+
+}
 
 /**
 Input: 
@@ -68,50 +117,31 @@ Output:
 
 **/
 int main(int argc, char *argv[]) {
-    Demo *demo = new Demo();
+  // 初始化 g_conf
+  initArg(argc, argv);
 
-    static struct option long_options[] = {
-                    {"input_dir",           required_argument, 0,  'i' },
-                    {"output_dir",          required_argument, 0,  'o' },
-                    {"output_db_url",       required_argument, 0,  'r' },
-                    {"output_db_user",      required_argument, 0,  'u' },
-                    {"output_db_passwd",    required_argument, 0,  'p' },
-                    {0,                     0                , 0,   0 }
-               };
-    int opt_index;
-	int opt;
+  cout << "[Start]\tload schema information." << endl;
+  // load schema information.
+  cout << "[End]\tload schema information." << endl;
 
-    while (-1 != (opt = getopt_long(argc, argv, "", long_options, &opt_index))) {
+  // load input Start file.
+  cout << "[Start]\tload input Start file." << endl;
+  cout << "[End]\tload input Start file." << endl;
 
-        switch (opt) {
-            case 'i' :
-                dmo.sourceDirectory = optarg;
-                break;
-            case 'o' :
-                dmo.sourceDirectory = optarg;
-                break;
-        }
-    }
+  // data clean.
+  cout << "[Start]\tdata clean." << endl;
+  /*
+   * 非法整数数值。如定义为int的列值出现了非法字符，我们统一将其处理为"0"值；
+   * 超长浮点数精度。如定义为decimal(3, 2)的列值中出现了小数点后3位，我们对其进行4舍5入；
+   * 非法时间数据。如定义为datetime的列值中出现了非法的日期，我们将其统一成"2020-04-01 00:00:00.0"；
+   * 超长字符长度。如定义为varchar(16)的列值出现了17个字符，此时我们按照此列的最大长度对列值截断（注意不考虑"\0"因素)。
+   */
+  cout << "[End]\tdata clean." << endl;
 
-    cout << "[Start]\tload schema information." << endl;
-    // load schema information.
-    demo->initialSchemaInfo(SCHEMA_FILE_DIR, CHECK_TABLE_SETS);
-    cout << "[End]\tload schema information." << endl;
+  // sink to target file
+  cout << "[Start]\tsink to target file." << endl;
 
-    // load input Start file.
-    cout << "[Start]\tload input Start file." << endl;
-    demo->loadSourceData(SOURCE_FILE_DIR);
-    cout << "[End]\tload input Start file." << endl;
+  cout << "[End]\tsink to target file." << endl;
 
-    // data clean.
-    cout << "[Start]\tdata clean." << endl;
-    demo->cleanData();
-    cout << "[End]\tdata clean." << endl;
-
-    // sink to target file
-    cout << "[Start]\tsink to target file." << endl;
-    demo->sinkData(SINK_FILE_DIR);
-    cout << "[End]\tsink to target file." << endl;
-
-    return 0;
+  return 0;
 }
