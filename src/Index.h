@@ -11,59 +11,29 @@
 
 using namespace std;
 
+
 class Index {
-private:
-  string index_name;
-  unordered_set<string> index_column;
-  bool is_pk;
-  bool is_uk;
 public:
-  Index(const unordered_map<string, string> &map) {
-    this->index_name = map.at("IndexName");
-    this->index_column.insert(map.at("IndexCols"));
-    this->is_pk = map.at("Primary")[0] == 't' ? true : false;
-    this->is_uk = map.at("Unique")[0] == 't' ? true : false;
-  }
+  Index() {}
 
-  const string &getIndexName() const {
-    return index_name;
-  }
+  int index[4] = {-1, -1, -1, -1};
+  int offset;
+  int len;
+//  int version;
 
-  void setIndexName(const string &indexName) {
-    index_name = indexName;
-  }
-
-  const unordered_set<string> &getIndexColumn() const {
-    return index_column;
-  }
-
-  void setIndexColumn(const unordered_set<string> &indexColumn) {
-    index_column = indexColumn;
-  }
-
-  bool isPk() const {
-    return is_pk;
-  }
-
-  void setIsPk(bool isPk) {
-    is_pk = isPk;
-  }
-
-  bool isUk() const {
-    return is_uk;
-  }
-
-  void setIsUk(bool isUk) {
-    is_uk = isUk;
-  }
-
-  bool operator==(const Index &other) {
-    return this->index_column == other.index_column;
-  }
-
-  bool operator<(const Index &other) {
-    return this->index_column.size() < other.index_column.size();
+  bool operator==(const Index &idx) {
+    return (index[0] == idx.index[0] && index[1] == idx.index[1] && index[2] == idx.index[2] &&
+            index[3] == idx.index[3]);
   }
 };
+
+bool IndexComparator(const Index &idx1, const Index &idx2) {
+  for (int i = 0; i < 4; ++i) {
+    if (idx1.index[i] != idx2.index[i]) {
+      return idx1.index[i] < idx2.index[i];
+    }
+  }
+  return true;
+}
 
 #endif //THIRD_CONTEST_INDEX_H

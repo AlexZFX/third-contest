@@ -17,19 +17,32 @@
 using namespace std;
 
 class Table {
-private:
+public:
   string database_name;
   string table_name;
 
   vector<Column> columns;
 //    unordered_map<string, Column> columns;
-  //not useful
-  unordered_map<string, Index> indexes;
+  int maxPkNum;
+  int fileCount;
+  int hashNum;
 
   // first: pk_name, second: ordinal
   unordered_map<string, int> pks;
+  vector<int> pksOrd;
+
+  // 500 25个文件 则 hashNum = 20
+  void setHashNum(int maxPkNum, int fileCount) {
+    this->maxPkNum = maxPkNum;
+    this->fileCount = fileCount;
+    this->hashNum = maxPkNum / fileCount;
+  }
 
 public:
+  int hash(int keyNum) {
+    return keyNum / hashNum;
+  }
+
   const string &getDatabaseName() const {
     return database_name;
   }
@@ -51,9 +64,6 @@ public:
     columns.push_back(column);
   }
 
-  void addIndex(const Index &index) {
-    indexes.insert({index.getIndexName(), index});
-  }
 
   void add_pk_name(const string &pk, const int ordinal) {
     pks.insert({pk, ordinal});
@@ -63,11 +73,14 @@ public:
     return pks;
   }
 
+  const vector<int> &getPkOrders() const {
+    return pksOrd;
+  }
+
   void reset() {
     database_name.clear();
     table_name.clear();
     columns.clear();
-    indexes.clear();
     pks.clear();
   }
 
@@ -76,7 +89,7 @@ public:
   }
 
   const Column &get_column(int ordinal) {
-    if (ordinal <= 0 || ordinal > columns.size()) {
+    if (ordinal < 0 || ordinal > columns.size()) {
       cout << "ordinal error." << endl;
     }
     return columns.at(ordinal);
@@ -98,14 +111,5 @@ public:
     cout << endl;
   }
 };
-
-// hard code，写死7张表
-void initTableMap(unordered_map<string, Table> &tableMap) {
-  std::string dbName = "";
-  Table table{};
-  // warehouse
-  Column column{"w_id", 1, MYSQL_TYPE_SHORT, 10, 10, 10};
-  table.addColumn(column);
-}
 
 #endif //THIRD_CONTEST_TABLE_H

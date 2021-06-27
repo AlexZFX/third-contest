@@ -13,3 +13,5 @@ echo "start"
 ./$OUT_NAME $@
 
 echo "end"
+
+# r --input_dir /root/ft_local/test_source --output_dir /root/ft_local/test_dst

@@ -5,50 +5,23 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <getopt.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include "Common.h"
 #include "Util.h"
 #include "Table.h"
 #include "DtsConf.h"
+#include "ThreadPool.hpp"
+
 
 using namespace std;
 
-/**
- * @author dts，just for demo.
- */
-class Demo {
-public:
-  string sourceDirectory;
-  string sinkDirectory;
-
-  vector<string> m_loadFiles;
-  unordered_map<string, Table> m_tables;
-
-public:
-  void initialSchemaInfo(string path, string tables) {
-    cout << "Read schema_info_dir/schema.info file and construct table in memory." << endl;
-
-    return;
-  }
-
-  void loadSourceData(const string &path) {
-    cout << "Read source_file_dir/tianchi_dts_source_data_* file" << endl;
-    // 获取对应路径下所有文件名
-    getFileNames(path, m_loadFiles);
-    return;
-  }
-
-  void cleanData() {
-    cout << "Clean and sort the source data." << endl;
-    return;
-  }
-
-  void sinkData(const string path) {
-    cout << "Sink the data." << endl;
-    return;
-  }
-};
-
 DtsConf g_conf;
+ThreadPool *g_threadPool;
+unordered_map<string, Table *> g_tableMap;
+unordered_map<string, TmpFile *> g_tmpFileMap;
+unordered_map<string, DstFile *> g_dstFileMap;
+
 
 /**
  * 初始化参数
@@ -98,6 +71,232 @@ void initArg(int argc, char *argv[]) {
 }
 
 /**
+ * 目标文件
+ * @param dstFileMap
+ */
+void initDstFileMap(unordered_map<string, DstFile *> &dstFileMap) {
+  for (const auto &table : CHECK_TABLE_LIST) {
+    auto file = new DstFile();
+    string path = g_conf.outputDir + SLASH_SEPARATOR + SINK_FILE_DIR + SLASH_SEPARATOR + SINK_FILE_NAME_TEMPLATE +
+                  table;
+    file->path = path;
+    file->fd = open(path.c_str(), O_WRONLY | O_CREAT);
+    dstFileMap[table] = file;
+  }
+}
+
+/**
+ * 中间文件
+ * @param tmpFileMap
+ */
+void initTmpFileMap(unordered_map<string, TmpFile *> &tmpFileMap) {
+  for (const auto &tableName : CHECK_TABLE_LIST) {
+    auto table = g_tableMap[tableName];
+    auto file = new TmpFile();
+    // 每个表对应一定数量的 table
+    for (int i = 0; i < table->fileCount; ++i) {
+      auto dstFile = new DstFile();
+      // table + i
+      string path = g_conf.outputDir + SLASH_SEPARATOR + SINK_FILE_DIR + SLASH_SEPARATOR + SINK_FILE_NAME_TEMPLATE +
+                    table->table_name + to_string(i);
+      dstFile->path = path;
+      dstFile->fd = open(path.c_str(), O_RDWR | O_CREAT);
+      cerr << "init file:" << path << " success, fd:" << dstFile->fd << endl;
+      file->files.emplace_back(dstFile);
+
+      // table + index_i
+//      auto indexFile = new DstFile();
+//      string indexPath =
+//        g_conf.outputDir + SLASH_SEPARATOR + SINK_FILE_DIR + SLASH_SEPARATOR + SINK_FILE_NAME_TEMPLATE +
+//        table->table_name + "index_" + to_string(i);
+//      indexFile->path = path;
+//      indexFile->fd = open(indexPath.c_str(), O_RDWR | O_CREAT);
+//      cerr << "init index file:" << indexPath << " success, fd:" << indexFile->fd << endl;
+//      file->indexFiles.emplace_back(indexFile);
+    }
+    tmpFileMap[tableName] = file;
+  }
+}
+
+
+void initFileMap() {
+  initTableMap(g_tableMap);
+  initTmpFileMap(g_tmpFileMap);
+  initDstFileMap(g_dstFileMap);
+}
+
+void clearFileMap() {
+  for (const auto &tableName : CHECK_TABLE_LIST) {
+    auto table = g_tableMap[tableName];
+    // 每个表对应一定数量的 table
+    delete g_tmpFileMap[tableName];
+  }
+  g_tmpFileMap.clear();
+  for (const auto &item : g_dstFileMap) {
+    string path = item.second->path;
+    long len = item.second->off - 1;
+    delete item.second;
+    int err = truncate(path.c_str(), len);
+    cerr << path << "  " << strerror(errno) << endl;
+  }
+}
+
+// 处理读取时的一行
+// I       tianchi_dts_data        orders  85      1       1       2935
+void dealReadRow(const string &row) {
+  std::vector<string> s = tokenize(row, '\t');
+  // s[0] 是 type，s[1] db， s[2] table
+  auto table = g_tableMap[s[2]];
+  string res;
+  // 生成即将写入文件的数据
+  for (int i = 3, j = 0; i < s.size(); ++i, ++j) {
+    res.append(table->get_column(j).validValue(s[i]));
+    if (i != s.size() - 1) {
+      res.append("\t");
+    } else {
+      res.append("\n");
+    }
+  }
+  // 写入 res 到指定文件中
+  // 先要根据主键大小做 hash
+  int hashKey = table->hash(stoi(s[table->pksOrd[0] + 3]));
+  auto tmpfile = g_tmpFileMap[s[2]];
+  // hash 完写入对应文件，这里要考虑并发
+  long off = tmpfile->files[hashKey]->write(res);
+//  Index idx;
+//  auto pkO = table->getPkOrders();
+//  for (int k = 0; k < pkO.size(); ++k) {
+//    idx.index[k] = stoi(s[pkO[k] + 3]);
+//  }
+//  idx.offset = off;
+//  idx.version = 0;
+//  tmpfile->indexFiles[hashKey]->write((char *) &idx, sizeof(Index));
+};
+
+/**
+ * 读取所有文件，hash 后写入 tmp 文件中
+ */
+void readAndClean() {
+  std::vector<string> readFiles;
+  getFileNames(g_conf.inputDir + SLASH_SEPARATOR + SOURCE_FILE_DIR + SLASH_SEPARATOR, readFiles,
+               SOURCE_FILE_NAME_TEMPLATE);
+  std::vector<std::future<bool> > readResults;
+  // 对匹配到的表执行全量
+  readResults.reserve(readFiles.size());
+  for (auto &readFile : readFiles) {
+    // lambda 调用
+    readResults.emplace_back(
+      g_threadPool->enqueue([=] {
+        int fd = open(readFile.c_str(), O_RDONLY);
+        size_t len = lseek(fd, 0, SEEK_END);
+        cerr << "file:" << readFile << " size:" << len << endl;
+        // 读 buf 文件，然后写到 tmp 文件里面去
+        char *buffer = (char *) mmap(nullptr, len, PROT_READ, MAP_PRIVATE, fd, 0);
+        close(fd);
+        // 按行读取并处理
+        size_t off = 0;
+        while (off < len) {
+          char *start = buffer;
+          while (off++ < len && *buffer != '\n') {
+            ++buffer;
+          }
+          // 此时的 *buff 不是 '\n'
+          char *end = buffer;
+          // data
+          string s(start, end - start);
+          dealReadRow(s);
+          // 跳过这个 \n
+          ++buffer;
+        }
+        munmap(buffer, len);
+        return true;
+      })
+    );
+  }
+  // 处理 lambda函数结果，等待所有全量任务执行完才继续
+  for (auto &&result: readResults) {
+    if (result.get()) {
+      continue;
+    }
+  }
+};
+
+void sortAndWrite() {
+  std::vector<string> readFiles;
+  std::vector<std::future<bool> > writeResults;
+  for (const auto &item : g_tableMap) {
+//  {
+    string tableName = item.first;
+    vector<int> pkOrds = item.second->getPkOrders();
+//    auto item = g_tableMap.find(TABLE_WAREHOUSE);
+//    string tableName = item->first;
+//    vector<int> pkOrds = item->second->getPkOrders();
+    writeResults.emplace_back(
+      g_threadPool->enqueue([=] {
+        auto tmpFile = g_tmpFileMap[tableName];
+        for (const auto &file : tmpFile->files) {
+          long len = file->off;
+          char *bufferStart = (char *) mmap(nullptr, len, PROT_READ, MAP_PRIVATE, file->fd, 0);
+          auto buffer = bufferStart;
+          // 按行读取并处理
+          size_t off = 0;
+          vector<Index> idxVec;
+          while (off < len) {
+            char *start = buffer;
+            // 表示每个字段的位置和 idx
+            Index idx;
+            idx.offset = off;
+            while (off++ < len && *buffer != '\n') {
+              ++buffer;
+            }
+            // 此时的 *buff 不是 '\n'
+            char *end = buffer;
+            // data
+            string s(start, end - start);
+            vector<string> res = tokenize(s, '\t');
+
+            for (int i = 0; i < pkOrds.size(); ++i) {
+              idx.index[i] = stoi(res[pkOrds[i]]);
+            }
+//            idx.version = 0;
+            idx.len = s.length() + 1;
+            idxVec.emplace_back(idx);
+            // data
+            // 跳过这个 \n
+            ++buffer;
+          }
+          sort(idxVec.begin(), idxVec.end(), IndexComparator);
+          for (int j = 0; j < idxVec.size(); ++j) {
+            if (j + 1 < idxVec.size() && (idxVec[j + 1] == idxVec[j])) {
+              continue;
+            } else {
+              char *writeOff = bufferStart + idxVec[j].offset;
+              g_dstFileMap[tableName]->write(writeOff, idxVec[j].len);
+            }
+          }
+          munmap(buffer, len);
+        }
+        return true;
+      }));
+  }
+  // 处理 lambda函数结果，等待所有全量任务执行完才继续
+  for (auto &&result: writeResults) {
+    if (result.get()) {
+      continue;
+    }
+  }
+};
+
+int64_t getCurrentLocalTimeStamp() {
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
+    std::chrono::system_clock::now());
+  auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+  return tmp.count();
+
+  // return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+/**
 Input: 
 1. Disordered source data (in SOURCE_FILE_DIR)
 2. Schema information (in SCHEMA_FILE_DIR)
@@ -119,15 +318,21 @@ Output:
 int main(int argc, char *argv[]) {
   // 初始化 g_conf
   initArg(argc, argv);
-
-  cout << "[Start]\tload schema information." << endl;
-  // load schema information.
-  cout << "[End]\tload schema information." << endl;
-
+  initFileMap();
+  g_threadPool = new ThreadPool(32);
+  cout << "[Start]\tload and clean data." << endl;
+  // load 的过程中进行数据清洗
+  long startTime = getCurrentLocalTimeStamp();
+  readAndClean();
+  cout << "readCleanTime : " << getCurrentLocalTimeStamp() - startTime << endl;
+  startTime = getCurrentLocalTimeStamp();
+  cout << "[End]\tload and clean data." << endl;
   // load input Start file.
   cout << "[Start]\tload input Start file." << endl;
+  sortAndWrite();
+  cout << "sortWriteTime : " << getCurrentLocalTimeStamp() - startTime << endl;
   cout << "[End]\tload input Start file." << endl;
-
+  clearFileMap();
   // data clean.
   cout << "[Start]\tdata clean." << endl;
   /*
