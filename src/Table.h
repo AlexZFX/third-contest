@@ -40,7 +40,7 @@ public:
 
 public:
   int hash(int keyNum) {
-    return keyNum / hashNum;
+    return (keyNum - 1) / hashNum;
   }
 
   const string &getDatabaseName() const {

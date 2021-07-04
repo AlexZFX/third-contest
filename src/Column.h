@@ -169,10 +169,11 @@ public:
       // 存在后置精度
       char buff[50];
       memset(buff, 0, 50);
+      double num = stod(value);
       if (column_name == "s_ytd") {
-        sprintf(buff, DECIMAL_0_FORMAT.c_str(), stod(value) + 1E-5);
+        sprintf(buff, DECIMAL_0_FORMAT.c_str(), num < 0 ? num - 1E-10 : num + 1E-10);
       } else {
-        sprintf(buff, DECIMAL_2_FORMAT.c_str(), stod(value) + 1E-5);
+        sprintf(buff, DECIMAL_2_FORMAT.c_str(), num < 0 ? num - 1E-10 : num + 1E-10);
       }
       return buff;
     }

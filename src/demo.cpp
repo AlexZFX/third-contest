@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include "Common.h"
 #include "Util.h"
 #include "Table.h"
@@ -80,7 +81,7 @@ void initDstFileMap(unordered_map<string, DstFile *> &dstFileMap) {
     string path = g_conf.outputDir + SLASH_SEPARATOR + SINK_FILE_DIR + SLASH_SEPARATOR + SINK_FILE_NAME_TEMPLATE +
                   table;
     file->path = path;
-    file->fd = open(path.c_str(), O_WRONLY | O_CREAT);
+    file->fd = open(path.c_str(), O_WRONLY | O_CREAT, 0644);
     dstFileMap[table] = file;
   }
 }
@@ -100,7 +101,7 @@ void initTmpFileMap(unordered_map<string, TmpFile *> &tmpFileMap) {
       string path = g_conf.outputDir + SLASH_SEPARATOR + SINK_FILE_DIR + SLASH_SEPARATOR + SINK_FILE_NAME_TEMPLATE +
                     table->table_name + to_string(i);
       dstFile->path = path;
-      dstFile->fd = open(path.c_str(), O_RDWR | O_CREAT);
+      dstFile->fd = open(path.c_str(), O_RDWR | O_CREAT , 0644);
       cerr << "init file:" << path << " success, fd:" << dstFile->fd << endl;
       file->files.emplace_back(dstFile);
 
@@ -120,6 +121,7 @@ void initTmpFileMap(unordered_map<string, TmpFile *> &tmpFileMap) {
 
 
 void initFileMap() {
+  mkdir((g_conf.outputDir + SLASH_SEPARATOR + SINK_FILE_DIR).c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
   initTableMap(g_tableMap);
   initTmpFileMap(g_tmpFileMap);
   initDstFileMap(g_dstFileMap);
@@ -136,8 +138,8 @@ void clearFileMap() {
     string path = item.second->path;
     long len = item.second->off - 1;
     delete item.second;
-    int err = truncate(path.c_str(), len);
-    cerr << path << "  " << strerror(errno) << endl;
+//    int err = truncate(path.c_str(), len);
+//    cerr << path << " " << err << " " << strerror(errno) << endl;
   }
 }
 
@@ -276,6 +278,8 @@ void sortAndWrite() {
           }
           munmap(buffer, len);
         }
+        int err = truncate(g_dstFileMap[tableName]->path.c_str(), g_dstFileMap[tableName]->off - 1);
+        cerr << g_dstFileMap[tableName]->path << " " << err << " " << strerror(errno) << endl;
         return true;
       }));
   }
@@ -319,7 +323,7 @@ int main(int argc, char *argv[]) {
   // 初始化 g_conf
   initArg(argc, argv);
   initFileMap();
-  g_threadPool = new ThreadPool(32);
+  g_threadPool = new ThreadPool(25);
   cout << "[Start]\tload and clean data." << endl;
   // load 的过程中进行数据清洗
   long startTime = getCurrentLocalTimeStamp();
