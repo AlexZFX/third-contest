@@ -8,10 +8,10 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include "Common.h"
+#include "common/Common.h"
 #include "utils/Util.h"
 #include "Table.h"
-#include "DtsConf.h"
+#include "common/DtsConf.h"
 #include "utils/ThreadPool.hpp"
 
 
