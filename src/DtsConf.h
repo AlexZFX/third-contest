@@ -18,8 +18,6 @@ public:
   string outputDbUser;
   string outputDbPass;
 
-
-
 };
 
 #endif //THIRD_CONTEST_DTSCONF_H

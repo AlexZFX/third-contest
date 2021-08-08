@@ -22,27 +22,12 @@ public:
   string table_name;
 
   vector<Column> columns;
-//    unordered_map<string, Column> columns;
-  int maxPkNum;
-  int fileCount;
-  int hashNum;
 
   // first: pk_name, second: ordinal
   unordered_map<string, int> pks;
   vector<int> pksOrd;
 
-  // 500 25个文件 则 hashNum = 20
-  void setHashNum(int maxPkNum, int fileCount) {
-    this->maxPkNum = maxPkNum;
-    this->fileCount = fileCount;
-    this->hashNum = maxPkNum / fileCount;
-  }
-
 public:
-  int hash(int keyNum) {
-    return (keyNum - 1) / hashNum;
-  }
-
   const string &getDatabaseName() const {
     return database_name;
   }

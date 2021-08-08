@@ -14,11 +14,8 @@
 #include <dirent.h>
 #include <vector>
 #include <string>
-#include "Table.h"
+#include "../Table.h"
 #include <algorithm>
-
-#define MAX_W_ID 500
-#define MAX_ITEM_ID 100000
 
 using namespace std;
 
@@ -81,7 +78,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto warehouse = new Table{};
     warehouse->table_name = TABLE_WAREHOUSE;
-    warehouse->setHashNum(MAX_W_ID, 1);
     Column w2{"w_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w3{"w_name", 2, MYSQL_TYPE_VARCHAR, 10, 10, 10};
     Column w5{"w_street_1", 3, MYSQL_TYPE_VARCHAR, 20, 10, 10};
@@ -107,7 +103,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto district = new Table{};
     district->table_name = TABLE_DISTRICT;
-    district->setHashNum(MAX_W_ID, 1);
     Column d2{"d_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column d9{"d_w_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column d3{"d_name", 3, MYSQL_TYPE_VARCHAR, 10, 10, 10};
@@ -138,7 +133,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto customer = new Table{};
     customer->table_name = TABLE_CUSTOMER;
-    customer->setHashNum(MAX_W_ID, 25);
     Column c10{"c_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column c5{"c_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column c19{"c_w_id", 3, MYSQL_TYPE_LONG, 10, 10, 10};
@@ -190,7 +184,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto new_orders = new Table{};
     new_orders->table_name = TABLE_NEW_ORDERS;
-    new_orders->setHashNum(MAX_W_ID, 5);
     Column w2{"no_o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w1{"no_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w3{"no_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10};
@@ -206,7 +199,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto orders = new Table{};
     orders->table_name = TABLE_ORDERS;
-    orders->setHashNum(MAX_W_ID, 5);
     Column w6{"o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w4{"no_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w8{"no_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10};
@@ -232,7 +224,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto order_line = new Table{};
     order_line->table_name = TABLE_ORDERS_LINE;
-    order_line->setHashNum(MAX_W_ID, 25);
     Column w7{"ol_o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w2{"ol_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w10{"ol_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10};
@@ -263,7 +254,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto item = new Table{};
     item->table_name = TABLE_ITEM;
-    item->setHashNum(MAX_ITEM_ID, 1);
     Column w2{"i_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w3{"i_im_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w4{"i_name", 3, MYSQL_TYPE_VARCHAR, 24, 10, 10};
@@ -282,7 +272,6 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto stock = new Table{};
     stock->table_name = TABLE_STOCK;
-    stock->setHashNum(MAX_W_ID, 50);
     Column w12{"s_i_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w16{"s_w_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w14{"s_quantity", 3, MYSQL_TYPE_LONG, 20, 10, 10};

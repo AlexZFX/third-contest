@@ -22,18 +22,8 @@ public:
 //  int version;
 
   bool operator==(const Index &idx) {
-    return (index[0] == idx.index[0] && index[1] == idx.index[1] && index[2] == idx.index[2] &&
-            index[3] == idx.index[3]);
+    return memcmp(index, idx.index, sizeof(int) * 4) == 0;
   }
 };
-
-bool IndexComparator(const Index &idx1, const Index &idx2) {
-  for (int i = 0; i < 4; ++i) {
-    if (idx1.index[i] != idx2.index[i]) {
-      return idx1.index[i] < idx2.index[i];
-    }
-  }
-  return true;
-}
 
 #endif //THIRD_CONTEST_INDEX_H
