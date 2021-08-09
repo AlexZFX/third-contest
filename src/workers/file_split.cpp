@@ -92,3 +92,4 @@ void *FileSplitter::start(void *args)
 
         return nullptr;
     }
+}
