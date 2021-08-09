@@ -14,7 +14,8 @@
 
 //自有文件头
 #include "file_split.h"
-#include "common.h"
+#include "common/Common.h"
+#include "common/FileChunk.h"
 
 using namespace std;
 
