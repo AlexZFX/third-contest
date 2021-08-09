@@ -42,7 +42,27 @@ public:
         _persisReadPos = _memReadPos;
     }
 
-    int updateAndSavePos(long readPos);
+    int update_and_save_pos(long readPos);
+
+    long get_start_pos()
+    {
+        return _startPos;
+    }
+
+    long get_end_pos()
+    {
+        return _endPos;
+    }
+
+    long get_mem_read_pos()
+    {
+        return _memReadPos;
+    }
+
+    char *get_mam_file()
+    {
+        return _mem_file;
+    }
 };
 
 /**
@@ -50,19 +70,26 @@ public:
  * @param readPos
  * @return
  */
-int FileChunk::updateAndSavePos(long readPos)
+int FileChunk::update_and_save_pos(long readPos)
 {
     _persisReadPos = readPos;
 
     return persistent();
 }
 
+// 批量记录
+struct BatchLineRecord
+{
+    LineRecord records[];
+};
+
 struct LineRecord
 {
+    int operation;
     string schema;
     string table;
     char uniq[35];
-    vector<long> field;
+    vector<string> field;
 };
 
 #endif //HIGHDTS_COMMON_H

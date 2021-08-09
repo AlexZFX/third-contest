@@ -14,6 +14,7 @@
 
 //自有文件头
 #include "file_split.h"
+#include "file_util.h"
 #include "common.h"
 
 using namespace std;
@@ -25,35 +26,20 @@ int FileSplitter::init()
 
 void *FileSplitter::start(void *args)
 {
-
+    // TODO 这里的队列需要改造处理，这里应该类似 golang 的 chan 进行操作处理，没有的话，死等
     for (auto name : this->waitDealFiles)
     {
-        int fd = open(name.c_str(), O_RDWR | O_CREAT, 0666);
-        if (fd == -1)
-        {
-            cout << "[ERROR] file can't open : " + name << endl;
-            return nullptr;
-        }
-
-        struct stat st;
-        int ret = fstat(fd, &st);
-
         // 开始进行文件 mmap 映射
-        char *mem_file = (char *)mmap(NULL, st.st_size, PROT_READ, MAP_FILE, fd, 0);
-
-        close(fd);
-
-        if (mem_file == MAP_FAILED)
+        char *mem_file = (char *)file_mmap(name.c_str());
+        if (mem_file == nullptr)
         {
-            // TODO 这里 mmap 失败，是否直接退出
-            cout << "[ERROR] do mmap failed " << endl;
-            return nullptr;
+            exit(1);
         }
 
         int chunkNo = 0;
 
         long startPos = 0;
-        for (long i = 0; i < st.st_size; i++)
+        for (long i = 0; i < sizeof(*mem_file); i++)
         {
             long endPos = PerChunkSize;
             const char *a = &mem_file[endPos];
@@ -82,11 +68,13 @@ void *FileSplitter::start(void *args)
                 }
             }
 
-            //TODO 找打了换行符号
+            //TODO 找到了换行符号，创建一个对应的 FileChunk，发送给下一个流程进行处理
             FileChunk *chunk = &FileChunk("", chunkNo, mem_file, startPos, endPos - 1);
             chunkNo++;
             // 设置下一个位置的起始
             startPos = endPos + 1;
+
+            // TODO 将 FileChunk 推送到消息队列中进行处理
         }
 
         return nullptr;

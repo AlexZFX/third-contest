@@ -5,7 +5,7 @@
 #
 APP_HOME=demo.cpp
 OUT_NAME=demo
-g++ $APP_HOME -std=c++11 -o $OUT_NAME
+g++ $APP_HOME -std=c++11 -o $OUT_NAME -lpthread
 
 #(函数)启动程序
 echo "start"
@@ -13,3 +13,5 @@ echo "start"
 ./$OUT_NAME $@
 
 echo "end"
+
+# r --input_dir /root/ft_local/test_source --output_dir /root/ft_local/test_dst
