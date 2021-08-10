@@ -5,7 +5,6 @@
 //
 #include <pthread.h>
 #include <string>
-#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
@@ -14,8 +13,8 @@
 
 //自有文件头
 #include "file_split.h"
-#include "common/Common.h"
-#include "common/FileChunk.h"
+#include "../common/FileChunk.h"
+#include "../common/Common.h"
 
 using namespace std;
 

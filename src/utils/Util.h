@@ -14,7 +14,8 @@
 #include <dirent.h>
 #include <vector>
 #include <string>
-#include "../Table.h"
+#include "../entity/Table.h"
+#include "../entity/Column.h"
 #include <algorithm>
 
 using namespace std;

@@ -12,6 +12,7 @@ add_executable(dts demo.cpp)
 
 set(CMAKE_BUILD_TYPE "Debug")
 
-target_link_libraries(dts pthread)
+
+target_link_libraries(dts pthread mysqlclient)
 
 
