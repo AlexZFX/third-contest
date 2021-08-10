@@ -6,6 +6,7 @@
 #define HIGHDTS_FILE_READER_H
 
 #include "common/Common.h"
+#include "common/FileChunk.h"
 
 class FileReader
 {
@@ -16,15 +17,15 @@ public:
      * @param chunk
      * @return
      */
-    int start_read_chunk(const FileChunk *chunk);
+    int startReadChunk(FileChunk *chunk);
 
     /**
      * 按行读取每条记录
      * @return {@link BatchLineRecord}
      */
-    struct BatchLineRecord *read_line();
+    struct BatchLineRecord *readLines();
 
-    void set_cur_chunk(FileChunk *chunk)
+    void setCurChunk(FileChunk *chunk)
     {
         _curChunk = chunk;
     }

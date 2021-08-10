@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 
 //自有文件头
+#include "global_obj.hpp"
 #include "file_split.h"
 #include "common/Common.h"
 #include "common/FileChunk.h"
@@ -53,9 +54,9 @@ void *FileSplitter::start(void *args)
 
         int chunkNo = 0;
 
-        long startPos = 0;
         for (long i = 0; i < st.st_size; i++)
         {
+            long startPos = i;
             long endPos = PerChunkSize;
             const char *a = &mem_file[endPos];
             if (!strcmp(a, "\n"))
@@ -84,12 +85,34 @@ void *FileSplitter::start(void *args)
             }
 
             //TODO 找打了换行符号
-            FileChunk *chunk = &FileChunk("", chunkNo, mem_file, startPos, endPos - 1);
+            FileChunk *chunk = &FileChunk(chunkNo, mem_file, startPos, endPos - 1, st.st_size, i == st.st_size - 1);
+
+            // 发送到对应的队列中去
+            ChunkMQ.Push(chunk);
+
             chunkNo++;
             // 设置下一个位置的起始
-            startPos = endPos + 1;
+            i = endPos;
         }
 
         return nullptr;
     }
+}
+
+class FileChunkManager
+{
+private:
+    map<string, *FileChunk> _chunkRepository;
+
+public:
+    FileChunkManager(/* args */);
+    ~FileChunkManager();
+};
+
+FileChunkManager::FileChunkManager(/* args */)
+{
+}
+
+FileChunkManager::~FileChunkManager()
+{
 }
