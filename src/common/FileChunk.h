@@ -104,6 +104,8 @@ public:
   string table;
   char uniq[35];
   vector<string> field;
+  char *dstChar;
+  int32_t size;
 
   LineRecord(FileChunk *chunk, long endPos)
   {

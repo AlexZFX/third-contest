@@ -13,6 +13,7 @@
  *
  */
 const long PerChunkSize = 16 * 1024 * 1024;
+const long LoadFileSize = 2 * 1024 * 1024;
 
 const std::string DATABASE_NAME = "tianchi_dts_data";                                                       // 待处理数据库名，无需修改
 const std::string SCHEMA_FILE_DIR = "schema_info_dir";                                                      // schema文件夹，无需修改。
@@ -56,23 +57,20 @@ const int AFTER_DATE_IMG = 5;
  * @param opDesc 
  * @return const int 
  */
-const int getOpByDesc(string opDesc)
-{
-  switch (opDesc)
-  {
-  case INSERT_OPERATION_DESC:
-    return INSERT_OPERATION;
-  case DELETE_OPERATION_DESC:
-    return DELETE_OPERATION;
-  case BEFORE_DATE_IMG_DESC:
-    return BEFORE_DATE_IMG;
-  case AFTER_DATE_IMG_DESC:
-    return AFTER_DATE_IMG;
+const int getOpByDesc(string opDesc) {
+  switch (opDesc) {
+    case INSERT_OPERATION_DESC:
+      return INSERT_OPERATION;
+    case DELETE_OPERATION_DESC:
+      return DELETE_OPERATION;
+    case BEFORE_DATE_IMG_DESC:
+      return BEFORE_DATE_IMG;
+    case AFTER_DATE_IMG_DESC:
+      return AFTER_DATE_IMG;
   }
 }
 
-typedef enum enum_field_types
-{
+typedef enum enum_field_types {
   MYSQL_TYPE_DECIMAL,
   MYSQL_TYPE_TINY,
   MYSQL_TYPE_SHORT,

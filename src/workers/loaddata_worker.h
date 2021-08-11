@@ -6,7 +6,7 @@
 #define HIGHDTS_LOADDATA_WORKER_H
 
 #include "../utils/BaseThread.h"
-#include "../utils/ThreadSafaQueue.h"
+#include "utils/ThreadSafeQueue.h"
 #include "../utils/newmysql.h"
 
 class LoadDataWorker : public BaseThread {
@@ -22,7 +22,7 @@ public:
 
   bool init();
 
-  int run();
+  int run() override;
 
   ~LoadDataWorker() {
     delete m_mysql;
