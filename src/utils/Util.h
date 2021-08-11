@@ -5,7 +5,6 @@
 #ifndef THIRD_CONTEST_UTIL_H
 #define THIRD_CONTEST_UTIL_H
 
-
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
@@ -20,24 +19,40 @@
 
 using namespace std;
 
+unordered_map<string, Table *> g_tableMap;
+
+const Table *getTableDesc(string tablename)
+{
+  const Table *table = g_tableMap[tablename];
+  return table;
+}
 
 // 获取目录下类型为 REG 的文件名
-bool getFileNames(const std::string &fileDir, vector<string> &files, const string &prefix = "") {
+bool getFileNames(const std::string &fileDir, vector<string> &files, const string &prefix = "")
+{
   DIR *dir;
   struct dirent *ptr;
-  if ((dir = opendir(fileDir.c_str())) == nullptr) {
+  if ((dir = opendir(fileDir.c_str())) == nullptr)
+  {
     perror("Open dir error...");
     return false;
   }
-  while ((ptr = readdir(dir)) != nullptr) {
-    if (ptr->d_type == DT_REG) {
+  while ((ptr = readdir(dir)) != nullptr)
+  {
+    if (ptr->d_type == DT_REG)
+    {
       string fileName = ptr->d_name;
-      if (!prefix.empty() && fileName.find_first_of(prefix) == 0) {
-        files.emplace_back(fileDir + SLASH_SEPARATOR + fileName);
-      } else if (prefix.empty()) {
+      if (!prefix.empty() && fileName.find_first_of(prefix) == 0)
+      {
         files.emplace_back(fileDir + SLASH_SEPARATOR + fileName);
       }
-    } else {
+      else if (prefix.empty())
+      {
+        files.emplace_back(fileDir + SLASH_SEPARATOR + fileName);
+      }
+    }
+    else
+    {
       continue;
     }
   }
@@ -48,24 +63,31 @@ bool getFileNames(const std::string &fileDir, vector<string> &files, const strin
 
 // Tokenizes the string using the delimiters.
 // Empty tokens will not be included in the result. 优先用这个
-inline std::vector<std::string> tokenize(const std::string &s, char delims, size_t num = 0) {
+inline std::vector<std::string> tokenize(const std::string &s, char delims, size_t num = 0)
+{
   size_t offset = 0;
   std::vector<std::string> tokens;
-  while (true) {
+  while (true)
+  {
     size_t i = s.find_first_not_of(delims, offset);
-    if (std::string::npos == i) {
+    if (std::string::npos == i)
+    {
       break;
     }
     size_t j = s.find_first_of(delims, i);
-    if (std::string::npos == j) { //已经到了末尾
+    if (std::string::npos == j)
+    { //已经到了末尾
       tokens.push_back(s.substr(i));
       offset = s.length();
       break;
     }
-    if (tokens.size() + 1 == num) { //已经满足了要求，剩余的全部拷贝
+    if (tokens.size() + 1 == num)
+    { //已经满足了要求，剩余的全部拷贝
       tokens.push_back(s.substr(i));
       break;
-    } else {
+    }
+    else
+    {
       tokens.push_back(s.substr(i, j - i));
       offset = j;
     }
@@ -74,7 +96,8 @@ inline std::vector<std::string> tokenize(const std::string &s, char delims, size
 }
 
 // hard code，写死8张表
-void initTableMap(unordered_map<string, Table *> &tableMap) {
+void initTableMap(unordered_map<string, Table *> &tableMap)
+{
   // warehouse
   {
     auto warehouse = new Table{};

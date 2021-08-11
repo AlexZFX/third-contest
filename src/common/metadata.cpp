@@ -3,12 +3,3 @@
 //
 
 #include "metadata.h"
-
-
-int Metadata::load() {
-    return 0;
-}
-
-int Metadata::persistent() {
-    return 0;
-}

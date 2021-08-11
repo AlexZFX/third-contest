@@ -10,37 +10,37 @@
 
 using namespace std;
 
-class Metadata {
+// TODO 这里是不是可以考虑用 protobuf 来进行数据的序列化操作
+/**
+ * @brief Metadata 内部应该有一个任意的数据
+ * 
+ */
+class Metadata
+{
 public:
-    Metadata(string savePath) {
-        _savePath = std::move(savePath);
+    Metadata(void *item)
+    {
+        _item = item;
     }
 
     ~Metadata() = default;
 
     /**
-     * 持久化操作
-     * @return
+     * @brief 返回一个构造对应元数据的生成器
+     * 
+     * @return void* 
      */
-    virtual int persistent();
+    void *supplier();
 
     /**
-     * 加载元数据信息
-     * @return
+     * @brief 加载元数据信息
+     * 
+     * @return bool 
      */
-    virtual int load();
-
-    /**
-     * 获取元数据的保存位置
-     * @return
-     */
-    string getSavePath() {
-        return _savePath;
-    }
+    virtual bool deserial();
 
 private:
-    string _savePath;
+    void *_item;
 };
-
 
 #endif //HIGHDTS_METADATA_H

@@ -6,25 +6,24 @@
 #include <string.h>
 #include <vector>
 
+#include "entity/Table.h"
+#include "entity/Column.h"
 #include "file_reader.h"
 
-
-BatchLineRecord *FileReader::read_line()
+BatchLineRecord *FileReader::readLines()
 {
     return nullptr;
 }
 
-int FileReader::start_read_chunk(FileChunk *chunk)
+int FileReader::startReadChunk(FileChunk *chunk)
 {
-    const long left = chunk->get_start_pos();
-    const long right = chunk->get_end_pos();
+    const long left = chunk->getStartPos();
+    const long right = chunk->getEndPos();
 
-    char *mem_file = chunk->get_mam_file();
+    char *mem_file = chunk->getMamFile();
 
     for (long i = left; i <= right; i++)
     {
-        LineRecord *record = &LineRecord();
-
         vector<string> tmp = vector<string>();
 
         // 开始进行列处理
@@ -47,10 +46,32 @@ int FileReader::start_read_chunk(FileChunk *chunk)
             // 行分割
             if (mem_file[seek] == '\n')
             {
+                // 创建一个 LineRecord 对象
+                LineRecord *record = &LineRecord(chunk, seek);
+
                 /* 开始处理这一行的数据 */
-                for (auto item : tmp)
+
+                record->operation = getOpByDesc(tmp[0]);
+                record->schema = tmp[1];
+                record->table = tmp[2];
+                record->field = vector<string>(tmp.size() - 3);
+
+                // 找到对应的 schema、table 元数据标识
+                const Table *table = getTableDesc(record->table);
+                const vector<int> pkPos = table->getPkOrders();
+
+                // 平凑出 pk-uk 的组装数据
+                string uniq = "";
+                for (int pos : pkPos)
                 {
-                    
+                    uniq += tmp[3 + pos];
+                }
+
+                record->uniq = uniq.c_str();
+
+                for (int i = 3; i < tmp.size(); i++)
+                {
+                    record->field[i - 3] = tmp[i];
                 }
 
                 // 清理临时数组
