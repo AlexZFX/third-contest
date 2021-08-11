@@ -15,7 +15,7 @@ using namespace std;
 class FileSplitter {
 
 public:
-    FileSplitter(){
+    FileSplitter() {
         waitDealFiles = vector<string>();
     }
 
@@ -39,14 +39,14 @@ public:
      * 开始执行文件分割
      * @return
      */
-    void* start(void* args);
+    void *start(void *args);
 
     /**
      * 添加待分割的文件
      * @param filename
      * @return
      */
-    int addFile(const string& filename) {
+    int addFile(const string &filename) {
         this->mtx.lock();
         this->waitDealFiles.push_back(filename);
         this->mtx.unlock();

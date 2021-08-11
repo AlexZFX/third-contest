@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include "common/Common.h"
 #include "utils/Util.h"
-#include "Table.h"
+#include "entity/Table.h"
 #include "common/DtsConf.h"
 #include "utils/ThreadPool.hpp"
 

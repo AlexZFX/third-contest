@@ -5,11 +5,10 @@
 #ifndef HIGHDTS_FILE_READER_H
 #define HIGHDTS_FILE_READER_H
 
-#include "common/Common.h"
-#include "common/FileChunk.h"
+#include "../common/Common.h"
+#include "../common/FileChunk.h"
 
-class FileReader
-{
+class FileReader {
 
 public:
     /**
@@ -19,14 +18,7 @@ public:
      */
     int startReadChunk(FileChunk *chunk);
 
-    /**
-     * 按行读取每条记录
-     * @return {@link BatchLineRecord}
-     */
-    struct BatchLineRecord *readLines();
-
-    void setCurChunk(FileChunk *chunk)
-    {
+    void setCurChunk(FileChunk *chunk) {
         _curChunk = chunk;
     }
 
@@ -36,4 +28,5 @@ private:
      */
     struct FileChunk *_curChunk;
 };
+
 #endif //HIGHDTS_FILE_READER_H
