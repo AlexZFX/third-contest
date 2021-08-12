@@ -13,7 +13,7 @@
 #include "../utils/BaseThread.h"
 #include "../common/FileChunk.h"
 #include "../common/Common.h"
-#include "utils/ThreadSafeQueue.h"
+#include "../utils/ThreadSafeQueue.h"
 
 using namespace std;
 

@@ -59,16 +59,6 @@ PRIMARY KEY(c_w_id, c_d_id, c_id) ) Engine=InnoDB;
 
 drop table if exists history;
 
-create table history (
-h_c_id int,
-h_c_d_id tinyint,
-h_c_w_id smallint,
-h_d_id tinyint,
-h_w_id smallint,
-h_date datetime,
-h_amount decimal(6,2),
-h_data varchar(24) ) Engine=InnoDB;
-
 drop table if exists new_orders;
 
 create table new_orders (
