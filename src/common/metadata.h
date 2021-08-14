@@ -15,32 +15,30 @@ using namespace std;
  * @brief Metadata 内部应该有一个任意的数据
  * 
  */
-class Metadata
-{
+class Metadata {
 public:
-    Metadata(void *item)
-    {
-        _item = item;
-    }
+  Metadata(void *item) {
+    _item = item;
+  }
 
-    ~Metadata() = default;
+  ~Metadata() = default;
 
-    /**
-     * @brief 返回一个构造对应元数据的生成器
-     * 
-     * @return void* 
-     */
-    void *supplier();
+  /**
+   * @brief 返回一个构造对应元数据的生成器
+   *
+   * @return void*
+   */
+  void *supplier();
 
-    /**
-     * @brief 加载元数据信息
-     * 
-     * @return bool 
-     */
-    virtual bool deserial();
+  /**
+   * @brief 加载元数据信息
+   *
+   * @return bool
+   */
+  virtual bool deserial();
 
 private:
-    void *_item;
+  void *_item;
 };
 
 #endif //HIGHDTS_METADATA_H

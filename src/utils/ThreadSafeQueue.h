@@ -2,8 +2,8 @@
 // Created by alexfxzhang on 2021/8/10.
 //
 
-#ifndef THIRD_CONTEST_THREADSAFAQUEUE_H
-#define THIRD_CONTEST_THREADSAFAQUEUE_H
+#ifndef THIRD_CONTEST_THREADSAFEQUEUE_H
+#define THIRD_CONTEST_THREADSAFEQUEUE_H
 
 #include <queue>
 #include <stack>
@@ -66,4 +66,4 @@ private:
   static T &next(std::queue<T> &q) { return q.front(); }
 };
 
-#endif //THIRD_CONTEST_THREADSAFAQUEUE_H
+#endif //THIRD_CONTEST_THREADSAFEQUEUE_H
