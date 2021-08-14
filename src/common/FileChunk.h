@@ -73,7 +73,7 @@ public:
 
 class LineRecord {
 public:
-    int operation{};
+    OPERATION operation{};
     string schema;
     string table;
     long *idxs{};

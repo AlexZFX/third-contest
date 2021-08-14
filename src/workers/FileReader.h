@@ -7,16 +7,31 @@
 
 #include "../common/Common.h"
 #include "../common/FileChunk.h"
+#include "../utils/BaseThread.h"
+#include "../utils/ThreadSafeQueue.h"
 
-class FileReader {
+class FileReader : public BaseThread {
+private:
+
+  ThreadSafeQueue<FileChunk *> *m_chunkQueuePtr;
+
+  ThreadSafeQueue<FileChunk *> *m_dstChunkQueuePtr;
 
 public:
+
+  explicit FileReader(ThreadSafeQueue<FileChunk *> *chunkQueuePtr, ThreadSafeQueue<FileChunk *> *dstChunkQueuePtr)
+    : m_chunkQueuePtr(chunkQueuePtr), m_dstChunkQueuePtr(dstChunkQueuePtr) {};
+
+  ~FileReader() = default;
+
+  int run() override;
+
   /**
    * 开始读取文件块
    * @param chunk
    * @return
    */
-  int start_read_chunk(FileChunk *chunk);
+  int readChunk(FileChunk *chunk);
 
   /**
    * 按行读取每条记录
@@ -24,15 +39,36 @@ public:
    */
   struct BatchLineRecord *readLines();
 
-  void setCurChunk(FileChunk *chunk) {
-    _curChunk = chunk;
+};
+
+class FileReaderMgn : public BaseThread {
+private:
+  int m_threadNum;
+  FileReader *workers[100]{};
+public:
+  FileReaderMgn(int threadNum, ThreadSafeQueue<FileChunk *> *queuePtr, ThreadSafeQueue<FileChunk *> *dstQueuePtr)
+    : m_threadNum(
+    threadNum) {
+    for (int i = 0; i < m_threadNum; ++i) {
+      workers[i] = new FileReader(queuePtr, dstQueuePtr);
+    }
   }
 
-private:
-  /**
-   * 当前的 FileReader 处理的 FileChunk
-   */
-  struct FileChunk *_curChunk;
+  ~FileReaderMgn() {
+    for (int i = 0; i < m_threadNum; ++i) {
+      delete workers[i];
+    }
+  }
+
+  int run() override {
+    for (int i = 0; i < m_threadNum; ++i) {
+      workers[i]->start();
+    }
+    for (int i = 0; i < m_threadNum; ++i) {
+      workers[i]->join();
+    }
+  }
+
 };
 
 #endif //HIGHDTS_FILE_READER_H

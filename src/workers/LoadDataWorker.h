@@ -32,7 +32,7 @@ public:
 class LoadDataWorkerMgn : public BaseThread {
 private:
   int m_threadNum;
-  LoadDataWorker *workers[100];
+  LoadDataWorker *workers[100]{};
 public:
   LoadDataWorkerMgn(int threadNum, ThreadSafeQueue<string> *queuePtr) : m_threadNum(threadNum) {
     for (int i = 0; i < m_threadNum; ++i) {

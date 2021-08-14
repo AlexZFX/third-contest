@@ -17,7 +17,7 @@
 #include "utils/logger.h"
 #include "workers/FileSplitter.h"
 #include "workers/LoadDataWorker.h"
-
+#include "workers/FileReader.h"
 
 using namespace std;
 
@@ -112,16 +112,21 @@ int main(int argc, char *argv[]) {
     int ns2 = atoi(s2.substr(s2.find_last_of('_') + 1).c_str());
     return ns1 > ns2;
   });
-  ThreadSafeQueue<FileChunk *> chunkQueue;
-  ThreadSafeQueue<string> loadDataFileNameQueue;
+  auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
+  auto afterReadChunkQueue = new ThreadSafeQueue<FileChunk *>(); // read 完的 queue，bitManager 的前置queue
+  auto loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
   // 后续 splitter 是可以优化掉的，只在第一次启动的时候run，后续重启不需要再run一遍，只要记录下来就行
-  FileSplitter splitter(readFiles, &chunkQueue);
+  FileSplitter splitter(readFiles, chunkQueue);
   splitter.start();
   //
   manager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn;
+  LoadDataWorkerMgn loadDataMgn(10, loadDataFileNameQueue);
   loadDataMgn.start();
+  // 读文件读线程
+  FileReaderMgn fileReaderMgn(10, chunkQueue, afterReadChunkQueue);
+  fileReaderMgn.start();
+
   loadDataMgn.join();
 
   return 0;
