@@ -12,4 +12,3 @@ int CBaseError::setError(const char *fmt, ...) {
   va_end(arg);
   return ret;
 }
-
