@@ -20,7 +20,7 @@ const std::string SCHEMA_FILE_DIR = "schema_info_dir";                          
 const std::string SCHEMA_FILE_NAME = "schema.info";                                                         // schema文件名，无需修改。
 const std::string SOURCE_FILE_DIR = "source_file_dir";                                                      // 输入文件夹，无需修改。
 const std::string SINK_FILE_DIR = "sink_file_dir";                                                          // 输出文件夹，无需修改。
-const std::string SOURCE_FILE_NAME_TEMPLATE = "tianchi_dts_source_data_";                                   // 输入文件名，无需修改。
+const std::string SOURCE_FILE_NAME_TEMPLATE = "tianchi_dts_rematch_data_";                                   // 输入文件名，无需修改。
 const std::string SINK_FILE_NAME_TEMPLATE = "tianchi_dts_sink_data_";                                       // 输出文件名模板，无需修改。
 const std::string CHECK_TABLE_SETS = "customer,district,item,new_orders,order_line,orders,stock,warehouse"; // 待处理表集合，无需修改。
 const std::vector<std::string> CHECK_TABLE_LIST = {"customer", "district", "item", "new_orders", "order_line", "orders",
@@ -35,6 +35,41 @@ const std::string TABLE_ORDERS_LINE = "order_line";
 const std::string TABLE_ITEM = "item";
 const std::string TABLE_STOCK = "stock";
 
+typedef enum TABLE_IDS {
+  TABLE_WAREHOUSE_ID = 1,
+  TABLE_DISTRICT_ID = 2,
+  TABLE_CUSTOMER_ID = 3,
+  TABLE_NEW_ORDERS_ID = 4,
+  TABLE_ORDERS_ID = 5,
+  TABLE_ORDERS_LINE_ID = 6,
+  TABLE_ITEM_ID = 7,
+  TABLE_STOCK_ID = 8,
+  TABLE_UNKNOWN = -1
+} TABLE_IDS;
+
+TABLE_IDS getTableIdByName(const std::string &tableName) {
+  if (tableName == TABLE_WAREHOUSE) {
+    return TABLE_WAREHOUSE_ID;
+  } else if (tableName == TABLE_CUSTOMER) {
+    return TABLE_CUSTOMER_ID;
+  } else if (tableName == TABLE_DISTRICT) {
+    return TABLE_DISTRICT_ID;
+  } else if (tableName == TABLE_NEW_ORDERS) {
+    return TABLE_NEW_ORDERS_ID;
+  } else if (tableName == TABLE_ORDERS) {
+    return TABLE_ORDERS_ID;
+  } else if (tableName == TABLE_ORDERS_LINE) {
+    return TABLE_ORDERS_LINE_ID;
+  } else if (tableName == TABLE_ITEM) {
+    return TABLE_ITEM_ID;
+  } else if (tableName == TABLE_STOCK) {
+    return TABLE_STOCK_ID;
+  } else {
+    return TABLE_UNKNOWN;
+  }
+}
+
+
 const std::string SLASH_SEPARATOR = "/";
 
 const std::string DATE_REGEX_STR = ".*[a-zA-Z]+.*";
@@ -46,10 +81,13 @@ const char DELETE_OPERATION_DESC = 'D';
 const char BEFORE_DATE_IMG_DESC = 'A';
 const char AFTER_DATE_IMG_DESC = 'B';
 
-const int INSERT_OPERATION = 1;
-const int DELETE_OPERATION = -1;
-const int BEFORE_DATE_IMG = 4;
-const int AFTER_DATE_IMG = 5;
+typedef enum OPERATION {
+  INSERT_OPERATION = 1,
+  DELETE_OPERATION = -1,
+  BEFORE_DATE_IMG = 4,
+  AFTER_DATE_IMG = 5,
+  UNKNOWN = -1,
+} OPERATION;
 
 const std::string ITEM_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_ITEM +
                                   " FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'"
@@ -90,7 +128,7 @@ const std::string CUSTOMER_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO T
  * @param opDesc 
  * @return const int 
  */
-int getOpByDesc(char c) {
+OPERATION getOpByDesc(char c) {
   switch (c) {
     case INSERT_OPERATION_DESC:
       return INSERT_OPERATION;
@@ -101,7 +139,7 @@ int getOpByDesc(char c) {
     case AFTER_DATE_IMG_DESC:
       return AFTER_DATE_IMG;
     default:
-      return -1;
+      return UNKNOWN;
   }
 }
 

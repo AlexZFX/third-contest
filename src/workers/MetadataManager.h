@@ -23,16 +23,22 @@
  * 注意：
  * 一个 chunk 生成好了 loadfile 文件，就说明对应的 chunk / bitmap 已经处理完成，可以进行落盘操作。
  * 也就是 loadfile/load 的逻辑是和前置的处理完全独立开的
- *
+ * 不关心 spliter，只记录已经完成的最大的连续chunkid，比这个小的都不再处理
  */
 class MetadataManager : public BaseThread {
 private:
   /* data */
   mutable std::mutex _mutex;
-  map<string, *Metadata> _chunkMetadataRepository;
+  int successChunkId; // 已完成的 chunkid 号，在这之前的 chunk 都不再做任何处理
+
 
 public:
-  MetadataManager(/* args */) {};
+
+  int loadFileIndex;
+
+  int successChunkIndex;
+
+  MetadataManager(/* args */) : loadFileIndex(0), successChunkIndex(0) {};
 
   ~MetadataManager() {};
 

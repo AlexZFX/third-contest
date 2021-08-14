@@ -2,11 +2,12 @@
 // Created by lesss on 2021/8/7.
 //
 
-#include "loaddata_worker.h"
+#include "LoadDataWorker.h"
 #include "../utils/logger.h"
 #include "../common/DtsConf.h"
 #include <cstdlib>
 #include <unistd.h>
+#include "common/Common.h"
 
 extern DtsConf g_conf;
 
@@ -34,14 +35,51 @@ int LoadDataWorker::run() {
     }
     char buf[1024] = {0};
     string tableName = fileName.substr(0, fileName.find_first_of('_'));
-    sprintf(buf, "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE "
-                 "FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'"
-                 "LINES TERMINATED BY '\\n' STARTING BY ''", tableName.c_str());
+    TABLE_IDS tableId = getTableIdByName(tableName);
+    switch (tableId) {
+      case TABLE_WAREHOUSE_ID: {
+        sprintf(buf, WAREHOUSE_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_ORDERS_LINE_ID: {
+        sprintf(buf, ORDER_LINE_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_DISTRICT_ID: {
+        sprintf(buf, DISTRICT_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_CUSTOMER_ID: {
+        sprintf(buf, CUSTOMER_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_NEW_ORDERS_ID: {
+        sprintf(buf, NEW_ORDERS_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_ORDERS_ID: {
+        sprintf(buf, ORDERS_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_ITEM_ID: {
+        sprintf(buf, ITEM_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_STOCK_ID: {
+        sprintf(buf, STOCK_LOAD_SQL.c_str(), tableName.c_str());
+        break;
+      }
+      case TABLE_UNKNOWN: {
+        LogError("unknown table: %s", tableName.c_str());
+        break;
+      }
+    }
     CSelectResult result;
     while (m_mysql->query(buf, result) < 0) {
       LogError("load data failed , error: %s, sleep 1 and retry", m_mysql->getErr());
       usleep(100 * 1000);
     }
+
   }
   return 0;
 }

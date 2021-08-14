@@ -13,6 +13,10 @@
 #include "entity/Table.h"
 #include "common/DtsConf.h"
 #include "utils/ThreadPool.hpp"
+#include "workers/MetadataManager.h"
+#include "utils/logger.h"
+#include "workers/FileSplitter.h"
+#include "workers/LoadDataWorker.h"
 
 
 using namespace std;
@@ -68,12 +72,6 @@ void initArg(int argc, char *argv[]) {
 
 }
 
-int64_t getCurrentLocalTimeStamp() {
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
-    std::chrono::system_clock::now());
-  auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
-  return tmp.count();
-}
 
 /**
 Input: 
@@ -97,24 +95,34 @@ Output:
 int main(int argc, char *argv[]) {
   // 初始化 g_conf
   initArg(argc, argv);
-  g_threadPool = new ThreadPool(25);
   cout << "[Start]\tload and clean data." << endl;
   // load 的过程中进行数据清洗
   long startTime = getCurrentLocalTimeStamp();
-  cout << "readCleanTime : " << getCurrentLocalTimeStamp() - startTime << endl;
-  startTime = getCurrentLocalTimeStamp();
-  cout << "[End]\tload and clean data." << endl;
-  // load input Start file.
-  cout << "[Start]\tload input Start file." << endl;
-  cout << "sortWriteTime : " << getCurrentLocalTimeStamp() - startTime << endl;
-  cout << "[End]\tload input Start file." << endl;
-  // data clean.
-  cout << "[Start]\tdata clean." << endl;
-  cout << "[End]\tdata clean." << endl;
-  // sink to target file
-  cout << "[Start]\tsink to target file." << endl;
-
-  cout << "[End]\tsink to target file." << endl;
+  MetadataManager manager;
+  if (!manager.init(g_conf.outputDir)) {
+    LogError("metadata init failed, return -1");
+    return -1;
+  }
+  // 其他的启动全都依赖于 manager信息ok否
+  std::vector<string> readFiles;
+  getFileNames(g_conf.inputDir, readFiles, SOURCE_FILE_NAME_TEMPLATE);
+  // 根据文件名逆序生成排序所有需要处理的文件
+  sort(readFiles.begin(), readFiles.end(), [](const string &s1, const string &s2) {
+    int ns1 = atoi(s1.substr(s1.find_last_of('_') + 1).c_str());
+    int ns2 = atoi(s2.substr(s2.find_last_of('_') + 1).c_str());
+    return ns1 > ns2;
+  });
+  ThreadSafeQueue<FileChunk *> chunkQueue;
+  ThreadSafeQueue<string> loadDataFileNameQueue;
+  // 后续 splitter 是可以优化掉的，只在第一次启动的时候run，后续重启不需要再run一遍，只要记录下来就行
+  FileSplitter splitter(readFiles, &chunkQueue);
+  splitter.start();
+  //
+  manager.start();
+  // loadData 的线程
+  LoadDataWorkerMgn loadDataMgn;
+  loadDataMgn.start();
+  loadDataMgn.join();
 
   return 0;
 }

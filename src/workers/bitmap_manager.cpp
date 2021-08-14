@@ -1,18 +1,11 @@
 
 
-class BitmapManager
-{
+class BitmapManager {
 private:
-    /* data */
+  /* data */
 public:
-    BitmapManager(/* args */);
-    ~BitmapManager();
+  BitmapManager(/* args */) {};
+
+  ~BitmapManager() {};
 };
 
-BitmapManager::BitmapManager(/* args */)
-{
-}
-
-BitmapManager::~BitmapManager()
-{
-}
