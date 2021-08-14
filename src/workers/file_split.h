@@ -27,7 +27,7 @@ public:
     /**
      * 任务ID信息
      */
-    pthread_t tid;
+    pthread_t tid{};
 
     /**
      * 初始化自己的相关信息

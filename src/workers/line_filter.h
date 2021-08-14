@@ -9,6 +9,9 @@
 #include "map"
 
 #include "../common/FileChunk.h"
+#include "../utils/BaseThread.h"
+#include "loaddata_worker.h"
+#include "../entity/Table.h"
 
 
 class LineFilter {
@@ -19,16 +22,33 @@ public:
      * @param record
      */
     void onReceive(LineRecord *record);
+
+    LoadDataWorker *getWorker() const {
+        return _worker;
+    }
+
+
+    Table *getTable() const {
+        return table;
+    }
+
+private:
+    Table *table;
+    LoadDataWorker *_worker;
+    ThreadSafeQueue<std::string> *queuePtr;
 };
 
 
-class LineFilterManager {
+class LineFilterManager : public BaseThread {
 public:
 
     /**
      *
      */
     void dispatch();
+
+protected:
+    int run() override;
 
 private:
     bool _isClosed;

@@ -18,7 +18,7 @@
 class FileChunk {
 
 private:
-    char *_memFile;
+    char *_memFile{};
     int _chunkNo;
     bool _isLast;
     long _startPos;
@@ -54,15 +54,15 @@ public:
         }
     }
 
-    long getStartPos() {
+    long getStartPos() const {
         return _startPos;
     }
 
-    long getEndPos() {
+    long getEndPos() const {
         return _endPos;
     }
 
-    long getMemReadPos() {
+    long getMemReadPos() const {
         return _memReadPos;
     }
 
@@ -76,20 +76,26 @@ public:
     int operation{};
     string schema;
     string table;
-    char uniq[35]{};
-    char* fields;
+    long *idxs{};
+    const char *fields{};
+    FileChunk *_chunk;
+    bool _isLast;
+    int datetimeStartPos;
 
-    LineRecord(FileChunk *chunk, long endPos) {
+    LineRecord(FileChunk *chunk, long endPos, bool isLast) {
         _chunk = chunk;
         _endPos = endPos;
+        _isLast = isLast;
     }
 
     ~LineRecord() {
         _chunk->updateAndSavePos(_endPos);
+        if (_isLast) {
+            _chunk->release();
+        }
     }
 
 private:
-    FileChunk *_chunk;
     long _endPos;
 };
 

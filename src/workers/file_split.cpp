@@ -10,6 +10,8 @@
 #include <iostream>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <cstring>
+#include <map>
 
 //自有文件头
 #include "global_obj.hpp"
@@ -25,18 +27,21 @@ int FileSplitter::init() {
 
 void *FileSplitter::start(void *args) {
 
-    for (auto name : this->waitDealFiles) {
+    for (const auto& name : this->waitDealFiles) {
         int fd = open(name.c_str(), O_RDWR | O_CREAT, 0666);
         if (fd == -1) {
             cout << "[ERROR] file can't open : " + name << endl;
             return nullptr;
         }
 
-        struct stat st;
+        struct stat st{};
         int ret = fstat(fd, &st);
+        if (ret == -1 ) {
+            return nullptr;
+        }
 
         // 开始进行文件 mmap 映射
-        char *mem_file = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_FILE, fd, 0);
+        char *mem_file = (char *) mmap(nullptr, st.st_size, PROT_READ, MAP_FILE, fd, 0);
 
         close(fd);
 
@@ -54,16 +59,16 @@ void *FileSplitter::start(void *args) {
             const char *a = &mem_file[endPos];
             if (!strcmp(a, "\n")) {
                 // TODO 当前位置不是换行符号，左右同时搜索
-                int tmpLeft = endPos - 1;
-                int tmpRight = endPos + 1;
+                long tmpLeft = endPos - 1;
+                long tmpRight = endPos + 1;
                 for (;;) {
                     const char *l = &mem_file[tmpLeft];
-                    if (strcmp(l, "\n")) {
+                    if (strcmp(l, "\n") != 0) {
                         endPos = tmpLeft;
                         break;
                     }
                     const char *r = &mem_file[tmpRight];
-                    if (strcmp(r, "\n")) {
+                    if (strcmp(r, "\n") != 0) {
                         endPos = tmpRight;
                         break;
                     }
@@ -74,7 +79,8 @@ void *FileSplitter::start(void *args) {
             }
 
             //TODO 找打了换行符号
-            FileChunk *chunk = &FileChunk(chunkNo, mem_file, startPos, endPos - 1, st.st_size, i == st.st_size - 1);
+            FileChunk chunk1(chunkNo, mem_file, startPos, endPos - 1, st.st_size, i == st.st_size - 1);
+            FileChunk *chunk = &chunk1;
 
             // 发送到对应的队列中去
             ChunkMQ->enqueue(chunk);
@@ -89,7 +95,7 @@ void *FileSplitter::start(void *args) {
 
 class FileChunkManager {
 private:
-    map<string, *FileChunk> _chunkRepository;
+    map<string, FileChunk*> _chunkRepository;
 
 public:
     FileChunkManager(/* args */);
@@ -97,8 +103,6 @@ public:
     ~FileChunkManager();
 };
 
-FileChunkManager::FileChunkManager(/* args */) {
-}
+FileChunkManager::FileChunkManager(/* args */) = default;
 
-FileChunkManager::~FileChunkManager() {
-}
+FileChunkManager::~FileChunkManager() = default;
