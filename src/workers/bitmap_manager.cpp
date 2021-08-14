@@ -4,6 +4,9 @@
 #include <shared_mutex>
 #include <map>
 
+
+#include "../entity/Index.h"
+
 using namespace std;
 
 
@@ -11,25 +14,39 @@ using namespace std;
 class BitmapItem {
 
 public:
+    BitmapItem(long max, Index index) {
+        _bits = new int [max];
+        _index = index;
+    }
 
     /**
      *
      * @param uniq
      */
-    bool putIfAbsent(string uniq);
+    bool putIfAbsent(int ids[]) {
+        _lock.lock();
 
+        _lock.unlock();
+    }
+
+private:
+    char *_bits;
+
+    Index _index;
+
+    std::mutex _lock;
 };
 
 
 class BitmapManager {
 private:
     /**
-     *
+     * 读写锁
      */
     std::shared_mutex rwLock;
 
     /**
-     *
+     * bitmap 统一存储对象
      */
     map<string, BitmapItem*> _itemMap;
 
@@ -48,7 +65,7 @@ public:
      * @param schema
      * @param table
      */
-    void registerBitmap(string schema, string table) {
+    void registerBitmap(string schema, string table, Index index) {
 
     }
 

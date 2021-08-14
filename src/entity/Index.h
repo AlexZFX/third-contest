@@ -11,19 +11,18 @@
 
 using namespace std;
 
-
 class Index {
 public:
-  Index() {}
+    Index(int pos, long min, long max) {
+        _pos = pos;
+        _min = min;
+        _max = max;
+    }
 
-  int index[4] = {-1, -1, -1, -1};
-  int offset;
-  int len;
-//  int version;
-
-  bool operator==(const Index &idx) {
-    return memcmp(index, idx.index, sizeof(int) * 4) == 0;
-  }
+private:
+    int _pos;
+    long _min;
+    long _max;
 };
 
 #endif //THIRD_CONTEST_INDEX_H

@@ -77,7 +77,7 @@ public:
     string schema;
     string table;
     char uniq[35]{};
-    vector<string> field;
+    char* fields;
 
     LineRecord(FileChunk *chunk, long endPos) {
         _chunk = chunk;
@@ -85,7 +85,6 @@ public:
     }
 
     ~LineRecord() {
-        field.clear();
         _chunk->updateAndSavePos(_endPos);
     }
 
