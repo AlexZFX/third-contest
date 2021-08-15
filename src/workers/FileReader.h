@@ -17,6 +17,10 @@ private:
 
   ThreadSafeQueue<FileChunk *> *m_dstChunkQueuePtr;
 
+  void dealLine(char *start);
+
+  FileChunk * m_chunk;
+
 public:
 
   explicit FileReader(ThreadSafeQueue<FileChunk *> *chunkQueuePtr, ThreadSafeQueue<FileChunk *> *dstChunkQueuePtr)

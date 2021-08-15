@@ -35,7 +35,7 @@ int LoadDataWorker::run() {
     }
     char buf[1024] = {0};
     string tableName = fileName.substr(0, fileName.find_first_of('_'));
-    TABLE_IDS tableId = getTableIdByName(tableName);
+    auto tableId = static_cast<TABLE_ID>(stoi(tableName));
     switch (tableId) {
       case TABLE_WAREHOUSE_ID: {
         sprintf(buf, WAREHOUSE_LOAD_SQL.c_str(), tableName.c_str());

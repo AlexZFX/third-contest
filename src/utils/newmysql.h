@@ -1,5 +1,5 @@
-#ifndef BINLOG_READER_NEWMYSQL_H
-#define BINLOG_READER_NEWMYSQL_H
+#ifndef THIRD_CONTEST_NEWMYSQL_H
+#define THIRD_CONTEST_NEWMYSQL_H
 
 #include <string>
 #include <map>
@@ -398,45 +398,5 @@ private:
   CNewMysqlConn &operator=(const CNewMysqlConn &rht);
 };
 
-//封装支持主备的NewMsyql
-class CMSNewMysql : public CBaseError {
-public:
-  CMSNewMysql() :
-    m_timeout(3), m_randConf(false) {
-  }
-
-  bool init(const vector<CNewMysqlConf> &confVec, //配置主备DB信息进去
-            unsigned int timeout = 3,
-            const string &db = "",
-            bool randConf = false,
-            bool reconnect = true,
-            int conntimeout = 0); //如randConfi为true,会对confVec做一个随机排序，使得不同的ip大致有相同的权重
-
-  //获取一个可用的NewMysql对象，如果都不可用，返回主DB，只有没有配置DB的时候才会返回空，所以应用一般可以不用判断是否==NULL
-  //注意这个函数可能会对mysql做强制重连的
-  CNewMysql *getNewMysql(CNewMysqlConf *conf = NULL);
-
-  void release();
-
-  ~CMSNewMysql();
-
-  const vector<CNewMysqlConf> &getConfVec() const {
-    return m_confVec;
-  }
-
-private:
-  vector<CNewMysqlConf> m_confVec;
-  unsigned int m_timeout;
-  string m_db;
-  bool m_randConf;
-
-  vector<CNewMysqlConn *> m_connVec;
-
-  CMSNewMysql(const CMSNewMysql &rht);
-
-  CMSNewMysql &operator=(const CMSNewMysql &rht);
-};
-
-
-#endif // BINLOG_READER_NEWMYSQL_H
+#endif // THIRD_CONTEST_NEWMYSQL_H
 

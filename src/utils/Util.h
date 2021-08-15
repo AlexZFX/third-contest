@@ -26,6 +26,9 @@ const Table *getTableDesc(string tablename) {
   return table;
 }
 
+#define SecSnprintf(buf, len, fmt, args...)    snprintf(buf,(len)-1,fmt,##args)
+#define SecSprintf(buf, fmt, args...)    snprintf(buf,sizeof((buf))-1,fmt,##args)
+
 int64_t getCurrentLocalTimeStamp() {
   std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(
     std::chrono::system_clock::now());
@@ -91,7 +94,7 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto warehouse = new Table{};
     warehouse->table_name = TABLE_WAREHOUSE;
-    Column w2{"w_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
+    Column w2{"w_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 0};
     Column w3{"w_name", 2, MYSQL_TYPE_VARCHAR, 10, 10, 10};
     Column w5{"w_street_1", 3, MYSQL_TYPE_VARCHAR, 20, 10, 10};
     Column w6{"w_street_2", 4, MYSQL_TYPE_VARCHAR, 20, 10, 10};
@@ -116,8 +119,8 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto district = new Table{};
     district->table_name = TABLE_DISTRICT;
-    Column d2{"d_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column d9{"d_w_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
+    Column d2{"d_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 1};
+    Column d9{"d_w_id", 2, MYSQL_TYPE_LONG, 10, 10, 10, true, 0};
     Column d3{"d_name", 3, MYSQL_TYPE_VARCHAR, 10, 10, 10};
     Column d6{"d_street_1", 4, MYSQL_TYPE_VARCHAR, 20, 10, 10};
     Column d7{"d_street_2", 5, MYSQL_TYPE_VARCHAR, 20, 10, 10};
@@ -146,9 +149,9 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto customer = new Table{};
     customer->table_name = TABLE_CUSTOMER;
-    Column c10{"c_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column c5{"c_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column c19{"c_w_id", 3, MYSQL_TYPE_LONG, 10, 10, 10};
+    Column c10{"c_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 2};
+    Column c5{"c_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10, true, 1};
+    Column c19{"c_w_id", 3, MYSQL_TYPE_LONG, 10, 10, 10, true, 0};
     Column c9{"c_first", 4, MYSQL_TYPE_VARCHAR, 16, 10, 10};
     Column c12{"c_middle", 5, MYSQL_TYPE_VARCHAR, 2, 10, 10};
     Column c11{"c_last", 6, MYSQL_TYPE_VARCHAR, 16, 10, 10};
@@ -197,9 +200,9 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto new_orders = new Table{};
     new_orders->table_name = TABLE_NEW_ORDERS;
-    Column w2{"no_o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w1{"no_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w3{"no_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10};
+    Column w2{"no_o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 2};
+    Column w1{"no_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10, true, 1};
+    Column w3{"no_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10, true, 0};
     new_orders->addColumn(w1);
     new_orders->addColumn(w2);
     new_orders->addColumn(w3);
@@ -212,9 +215,9 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto orders = new Table{};
     orders->table_name = TABLE_ORDERS;
-    Column w6{"o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w4{"no_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w8{"no_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10};
+    Column w6{"o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 2};
+    Column w4{"no_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10, true, 1};
+    Column w8{"no_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10, true, 0};
     Column w2{"o_c_id", 4, MYSQL_TYPE_LONG, 20, 10, 10};
     Column w5{"o_entry_d", 5, MYSQL_TYPE_DATETIME, 20, 10, 10};
     Column w3{"o_carrier_id", 6, MYSQL_TYPE_LONG, 2, 10, 10};
@@ -237,10 +240,10 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto order_line = new Table{};
     order_line->table_name = TABLE_ORDERS_LINE;
-    Column w7{"ol_o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w2{"ol_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w10{"ol_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10};
-    Column w6{"ol_number", 4, MYSQL_TYPE_LONG, 20, 10, 10};
+    Column w7{"ol_o_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 2};
+    Column w2{"ol_d_id", 2, MYSQL_TYPE_LONG, 10, 10, 10, true, 1};
+    Column w10{"ol_w_id", 3, MYSQL_TYPE_LONG, 20, 10, 10, true};
+    Column w6{"ol_number", 4, MYSQL_TYPE_LONG, 20, 10, 10, true, 3};
     Column w5{"ol_i_id", 5, MYSQL_TYPE_LONG, 20, 10, 10};
     Column w9{"ol_supply_w_id", 6, MYSQL_TYPE_LONG, 2, 10, 10};
     Column w3{"ol_delivery_d", 7, MYSQL_TYPE_DATETIME, 9, 10, 10};
@@ -267,7 +270,7 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto item = new Table{};
     item->table_name = TABLE_ITEM;
-    Column w2{"i_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
+    Column w2{"i_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true};
     Column w3{"i_im_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
     Column w4{"i_name", 3, MYSQL_TYPE_VARCHAR, 24, 10, 10};
     Column w5{"i_price", 4, MYSQL_TYPE_DECIMAL, 5, 2, 10};
@@ -285,8 +288,8 @@ void initTableMap(unordered_map<string, Table *> &tableMap) {
   {
     auto stock = new Table{};
     stock->table_name = TABLE_STOCK;
-    Column w12{"s_i_id", 1, MYSQL_TYPE_LONG, 10, 10, 10};
-    Column w16{"s_w_id", 2, MYSQL_TYPE_LONG, 10, 10, 10};
+    Column w12{"s_i_id", 1, MYSQL_TYPE_LONG, 10, 10, 10, true, 1};
+    Column w16{"s_w_id", 2, MYSQL_TYPE_LONG, 10, 10, 10, true};
     Column w14{"s_quantity", 3, MYSQL_TYPE_LONG, 20, 10, 10};
     Column w2{"s_dist_01", 4, MYSQL_TYPE_VARCHAR, 24, 10, 10};
     Column w3{"s_dist_02", 5, MYSQL_TYPE_VARCHAR, 24, 10, 10};

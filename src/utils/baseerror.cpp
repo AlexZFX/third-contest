@@ -3,7 +3,6 @@
 
 #include "baseerror.h"
 
-using namespace binlog_reader;
 
 int CBaseError::setError(const char *fmt, ...) {
   va_list arg;

@@ -18,6 +18,7 @@
 #include "workers/FileSplitter.h"
 #include "workers/LoadDataWorker.h"
 #include "workers/FileReader.h"
+#include "workers/LineFilter.h"
 
 using namespace std;
 
@@ -126,6 +127,10 @@ int main(int argc, char *argv[]) {
   // 读文件读线程
   FileReaderMgn fileReaderMgn(10, chunkQueue, afterReadChunkQueue);
   fileReaderMgn.start();
+
+  LineFilter lineFilter(afterReadChunkQueue); // 单线程的filter，过滤record
+  lineFilter.start();
+
 
   loadDataMgn.join();
 

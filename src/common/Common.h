@@ -45,9 +45,9 @@ typedef enum TABLE_IDS {
   TABLE_ITEM_ID = 7,
   TABLE_STOCK_ID = 8,
   TABLE_UNKNOWN = -1
-} TABLE_IDS;
+} TABLE_ID;
 
-TABLE_IDS getTableIdByName(const std::string &tableName) {
+TABLE_ID getTableIdByName(const std::string &tableName) {
   if (tableName == TABLE_WAREHOUSE) {
     return TABLE_WAREHOUSE_ID;
   } else if (tableName == TABLE_CUSTOMER) {

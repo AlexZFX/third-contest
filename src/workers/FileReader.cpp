@@ -9,91 +9,101 @@
 #include "entity/Table.h"
 #include "entity/Column.h"
 #include "FileReader.h"
+#include "BitmapManager.hpp"
+
+extern unordered_map<string, Table *> g_tableMap;
+extern BitmapManager g_bitmapManager;
 
 int FileReader::run() {
   while (m_threadstate) {
-    FileChunk *chunk = nullptr;
-    m_chunkQueuePtr->dequeue(1, chunk);
-    readChunk(chunk);
+    m_chunk = nullptr;
+    m_chunkQueuePtr->dequeue(1, m_chunk);
+    if (m_chunk != nullptr) {
+
+    }
+    readChunk(m_chunk);
+    m_dstChunkQueuePtr->enqueue(m_chunk);
   }
   return 0;
-}
-
-BatchLineRecord *FileReader::readLines() {
-  return nullptr;
 }
 
 int FileReader::readChunk(FileChunk *chunk) {
   const long left = chunk->getStartPos();
   const long right = chunk->getEndPos();
 
-  char *mem_file = chunk->getMamFile();
+  char *memFile = chunk->getMamFile();
 
   for (long i = left; i <= right; i++) {
-    vector<string> tmp = vector<string>();
-
     // 开始进行列处理
     long seek = left;
-    for (; seek <= right; seek++) {
-      // 字段分割
-      if (mem_file[seek] == '\t') {
-        const int col_size = (int) (seek - i);
-        char *col_arr = new char[col_size];
-
-        // 拷贝对应的数据
-        memcpy(col_arr, mem_file + (i), col_size);
-        string elem(col_arr);
-        tmp.push_back(elem);
+    while (seek <= right) {
+      // 从 I D T 开始的每一列序号，第一列为 operation
+      int columnNum = 1;
+      // 是 B 行的话直接不管
+      if (memFile[seek] == 'B') {
+        while (memFile[seek] != '\n') { // 注意可能越界
+          ++seek;
+        }
+        ++seek;
+        // 可以开始处理这一行 A 和 insert 相同处理即可
         continue;
       }
+      dealLine(memFile + seek);
 
-      // 行分割
-      if (mem_file[seek] == '\n') {
-        // 创建一个 LineRecord 对象
-        LineRecord tmpRecord(chunk, seek, seek == right);
-        LineRecord *record = &tmpRecord;
-
-        /* 开始处理这一行的数据 */
-        record->operation = getOpByDesc(tmp[0]);
-        record->schema = tmp[1];
-        record->table = tmp[2];
-
-        // 找到对应的 schema、table 元数据标识
-        const Table *table = getTableDesc(record->table);
-        const vector<Column> columns = table->columns;
-        const vector<int> pkPos = table->getPkOrders();
-
-        // 凑出 pk-uk 的组装数据
-        long idxs[pkPos.size()];
-        for (int pos : pkPos) {
-          idxs[pos] = stol(tmp[3 + pos]);
-        }
-        record->idxs = idxs;
-
-        string tmpFields;
-        for (int j = 3; j < tmp.size(); j++) {
-          const Column column = columns[j - 3];
-
-          // find datetime field start pos
-          if (column.getDataType() == MYSQL_TYPE_DATETIME) {
-            record->datetimeStartPos = (int) tmpFields.size() + 1;
-          }
-          tmpFields += tmp[j];
-
-        }
-        record->fields = tmpFields.c_str();
-
-        // 清理临时数组
-        tmp.clear();
-
-        // 发送到下一个通道
-        LineRecordMQ->enqueue(record);
-
-        // 跳出本次的行处理操作
-        i = seek + 1;
-        break;
-      }
     }
   }
   return 0;
+}
+
+/**
+ * 从这里开始处理一行，目的是做一个前置过滤，减少处理量，数据直接拿出来，不做额外处理
+ */
+void FileReader::dealLine(char *start) {
+  char *pos = start;
+  char *tmpStart, *tmpEnd, *columnStart;
+  // 把一行里面的几个 position，主键搞出来
+  OPERATION op = getOpByDesc(*pos);
+  pos += 2; // 自己和 \t
+  // 处理掉 schema 名
+  while (*pos != '\t') {
+    ++pos;
+  }
+
+  tmpStart = pos;
+  while (*pos != '\t') {
+    ++pos;
+  }
+  tmpEnd = pos;
+  string tableName(tmpStart, tmpEnd - tmpStart);
+  // 根据不同的 table 有不同的处理方式
+  TABLE_ID tableId = getTableIdByName(tableName);
+  auto table = g_tableMap[tableName];
+  ++pos; // \t
+  columnStart = pos; // 列的真实开始位置
+  int columnIndex = 0;
+  int ids[4];
+  int timeSeek = -1;
+  while (*pos != '\n') {
+    tmpStart = pos;
+    while (*pos != '\t' && *pos != '\n') {
+      ++pos;
+    }
+    tmpEnd = pos;
+    if (table->columns[columnIndex].isPk) {
+      ids[table->columns[columnIndex].pkOrder] = atoi(tmpStart);
+    } else if (table->columns[columnIndex].getDataType() == MYSQL_TYPE_DATETIME) {
+      timeSeek = tmpStart - columnStart; // 记录一下对应的 time 所在的位置，每个表只有一个列，所以这就记录一次
+    }
+    ++columnIndex;
+  }
+  // 读完了这一行，看看是否需要放到chunk的栈里面
+  // 提前检验一次 pk 是否已经被处理过
+  if (g_bitmapManager.checkExistsNoLock(tableId, ids)) { // 存在的话直接返回不需要处理了
+    return;
+  }
+
+  auto *line = new LineRecord();
+  line->table = tableId;
+  m_chunk->addLine(line);
+
 }

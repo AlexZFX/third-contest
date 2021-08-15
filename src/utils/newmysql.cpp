@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "strings.hpp"
 #include "my_const.h"
+#include "../utils/Util.h"
 
 //获取系统启动以来的时间，单位为毫秒
 inline uint64_t getMonotonic_msec() {
@@ -112,26 +113,27 @@ bool CNewMysql::init(const string &host,
 
 }
 
-bool binlog_reader::initMysqlConfVec(std::vector<CNewMysqlConf> &vec, const std::string &hostlist, const std::string &user,
-                      const std::string &pass, char *errbuf) {
-  std::vector<std::string> hostlistVec = strings::tokenize(hostlist, ",");
-  for (auto iter = hostlistVec.begin(); iter != hostlistVec.end(); ++iter) {
-    // 最后一个 _ 做分隔符，避免域名中有 _ 导致的init失败
-    std::size_t splitOff = iter->find_last_of('_');
-    if (splitOff == std::string::npos) {
-      SecSnprintf(errbuf, 1024, "ipport:%s has no split char '_', hostlist:%s", iter->c_str(), hostlist.c_str());
-      return false;
-    } else {
-      CNewMysqlConf conf;
-      conf.m_host = iter->substr(0, splitOff);
-      conf.m_port = atoi(iter->substr(splitOff + 1).c_str());
-      conf.m_user = user;
-      conf.m_pass = pass;
-      vec.push_back (conf);
-    }
-  }
-  return true;
-}
+//bool
+//binlog_reader::initMysqlConfVec(std::vector<CNewMysqlConf> &vec, const std::string &hostlist, const std::string &user,
+//                                const std::string &pass, char *errbuf) {
+//  std::vector<std::string> hostlistVec = strings::tokenize(hostlist, ",");
+//  for (auto iter = hostlistVec.begin(); iter != hostlistVec.end(); ++iter) {
+//    // 最后一个 _ 做分隔符，避免域名中有 _ 导致的init失败
+//    std::size_t splitOff = iter->find_last_of('_');
+//    if (splitOff == std::string::npos) {
+//      SecSnprintf(errbuf, 1024, "ipport:%s has no split char '_', hostlist:%s", iter->c_str(), hostlist.c_str());
+//      return false;
+//    } else {
+//      CNewMysqlConf conf;
+//      conf.m_host = iter->substr(0, splitOff);
+//      conf.m_port = atoi(iter->substr(splitOff + 1).c_str());
+//      conf.m_user = user;
+//      conf.m_pass = pass;
+//      vec.push_back(conf);
+//    }
+//  }
+//  return true;
+//}
 
 bool CNewMysql::init(const string &host,
                      unsigned int port,
@@ -319,8 +321,13 @@ int CNewMysql::query(const char *sql, CSelectResult &selectResult, bool recurse)
   unsigned long numRows;
 
   if (mysql_query(m_mysql, sql) != 0) {
-    int err = mysql_errno(m_mysql);
+    unsigned int err = mysql_errno(m_mysql);
     m_lastErrNo = mysql_errno(m_mysql);
+#define CR_SERVER_GONE_ERROR 2006
+#define CR_SERVER_LOST 2013
+#define ER_DUP_ENTRY 1062
+#define CR_COMMANDS_OUT_OF_SYNC 2014
+#define CR_UNKNOWN_ERROR 2000
     if (err == CR_SERVER_GONE_ERROR || err == CR_SERVER_LOST) {
       setError("query error[%s], errno:%d,sql[%s],may retry:%d", mysql_error(m_mysql), mysql_errno(m_mysql), sql,
                recurse);
@@ -333,7 +340,7 @@ int CNewMysql::query(const char *sql, CSelectResult &selectResult, bool recurse)
       }
     } else if (err == ER_DUP_ENTRY) //insert 操作,key重复
     {
-      m_lastOpTime = time(NULL);
+      m_lastOpTime = time(nullptr);
       setError("key duplacate");
       return 0;
     } else if (err == CR_COMMANDS_OUT_OF_SYNC || err == CR_UNKNOWN_ERROR) {
@@ -345,16 +352,16 @@ int CNewMysql::query(const char *sql, CSelectResult &selectResult, bool recurse)
       return -1;
     }
   } else {
-    m_lastOpTime = time(NULL);
+    m_lastOpTime = time(nullptr);
 
-    MYSQL_RES *result = NULL;
+    MYSQL_RES *result = nullptr;
     if (selectResult.isOneByOne()) {
       result = mysql_use_result(m_mysql);
     } else {
       result = mysql_store_result(m_mysql);
     }
 
-    if (NULL == result) {
+    if (nullptr == result) {
       if (mysql_field_count(m_mysql) == 0) { //insert ,update and so on
         numRows = mysql_affected_rows(m_mysql);
         if (numRows != (unsigned long) -1) {
@@ -377,9 +384,7 @@ int CNewMysql::query(const char *sql, CSelectResult &selectResult, bool recurse)
         return -1;
       }
     } else {
-      //alalyzeResult(result,selectResult);
       selectResult.alalyzeResult(this, result);
-//            mysql_free_result (result);
     }
 
     return 0;
@@ -601,102 +606,3 @@ CRowResult::~CRowResult() {
   }
 
 }
-
-bool CMSNewMysql::init(const vector<CNewMysqlConf> &confVec, unsigned int timeout, const string &db, bool randConf,
-                       bool reconnect, int conntimeout) {
-
-  if (confVec == m_confVec && timeout == m_timeout && m_db == db && m_randConf == randConf) {
-    printf("CMSNewMysql::init conf is not change\n");
-    return true;
-  }
-
-//    printf ("CMSNewMysql::init need reinit\n");
-
-  release(); //先释放老的配置，这样就能支持动态加载
-
-  bool ret = false;
-
-  for (auto iter = confVec.begin(); iter != confVec.end(); ++iter) {
-    auto *tmpConn = new CNewMysqlConn(*iter, timeout, db, reconnect, conntimeout);
-    if (tmpConn->init()) //只要有一条连接init成功，则return true
-    {
-      ret = true;
-    } else {
-      setError("%s", tmpConn->getNewMysql(NULL)->getErr());
-    }
-    m_connVec.push_back(tmpConn);
-  }
-
-  if (randConf) {
-    random_shuffle(m_connVec.begin(), m_connVec.end());
-  }
-
-  m_confVec = confVec;
-  m_timeout = timeout;
-  m_db = db;
-  m_randConf = randConf;
-
-  return ret;
-//    return true;
-}
-
-void CMSNewMysql::release() {
-  for (vector<CNewMysqlConn *>::iterator iter = m_connVec.begin(); iter != m_connVec.end(); ++iter) {
-    delete (*iter);
-  }
-  m_connVec.clear();
-  m_confVec.clear();
-}
-
-CNewMysql *CMSNewMysql::getNewMysql(CNewMysqlConf *conf) {
-
-  size_t connNum = 0;
-
-  for (vector<CNewMysqlConn *>::iterator iter = m_connVec.begin(); iter != m_connVec.end(); ++iter) {
-    CNewMysqlConn *conn = *iter;
-    if (conn->isConnected()) //连接可用，直接返回
-    {
-      return conn->getNewMysql(conf);
-    } else //连接不可用，看是否在锁定时间，如果不是则重连
-    {
-      time_t t = time(NULL);
-      if (labs(t - conn->getLockedBeginTime()) > 60) {
-        ++connNum;
-        if (conn->getNewMysql()->checkConnect(true)) { //重连成功，返回这条连接
-          return conn->getNewMysql(conf);
-        } else //更新锁定时间
-        {
-          conn->setLockedBeginTime(t);
-        }
-      }
-    }
-  }
-
-  CNewMysql *result = NULL;
-
-  //没有可用的连接,重置锁定时间，这样下次都可以重连
-  for (vector<CNewMysqlConn *>::iterator iter = m_connVec.begin(); iter != m_connVec.end(); ++iter) {
-    CNewMysqlConn *conn = *iter;
-    if (!result) //result赋值为主db
-    {
-      result = conn->getNewMysql(conf);
-    }
-
-    conn->setLockedBeginTime(0);
-    if (connNum != m_connVec.size()) {
-      conn->getNewMysql()->checkConnect(true);
-    }
-  }
-
-  return result;
-}
-
-CMSNewMysql::~CMSNewMysql() {
-
-  release();
-//    for (vector<CNewMysqlConn*>::iterator iter = m_connVec.begin (); iter != m_connVec.end (); ++iter) {
-//        delete (*iter);
-//    }
-//    m_connVec.clear ();
-}
-
