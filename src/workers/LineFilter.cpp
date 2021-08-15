@@ -25,9 +25,15 @@ int LineFilter::run() {
         continue;
       }
       // 把 line 给到 loadFileWriter
-
+      // push to dst queue
       chunk->m_lines.pop();
     }
+    // bitmapSnapShot
+    // 写到 bitMapManger -> queue -> pop
+    // SnapShot->id = chunkId
+
+    // 所有 loadFileWriter -> min(chunkId) > queuePop;
+
   }
   return 0;
 }

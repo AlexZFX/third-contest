@@ -79,7 +79,7 @@ int LoadDataWorker::run() {
       LogError("load data failed , error: %s, sleep 1 and retry", m_mysql->getErr());
       usleep(100 * 1000);
     }
-
+    // TODO metadata
   }
   return 0;
 }

@@ -19,7 +19,7 @@ int FileReader::run() {
     m_chunk = nullptr;
     m_chunkQueuePtr->dequeue(1, m_chunk);
     if (m_chunk != nullptr) {
-
+      continue;
     }
     readChunk(m_chunk);
     m_dstChunkQueuePtr->enqueue(m_chunk);
@@ -49,7 +49,7 @@ int FileReader::readChunk(FileChunk *chunk) {
         continue;
       }
       dealLine(memFile + seek);
-
+      // TODO ++seek
     }
   }
   return 0;
@@ -68,7 +68,6 @@ void FileReader::dealLine(char *start) {
   while (*pos != '\t') {
     ++pos;
   }
-
   tmpStart = pos;
   while (*pos != '\t') {
     ++pos;
@@ -104,6 +103,7 @@ void FileReader::dealLine(char *start) {
 
   auto *line = new LineRecord();
   line->table = tableId;
+  // TODO 完善 line 的数据
   m_chunk->addLine(line);
 
 }

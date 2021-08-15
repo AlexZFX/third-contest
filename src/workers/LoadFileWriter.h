@@ -24,6 +24,7 @@ using namespace std;
  */
 class LoadFileWriter : public BaseThread {
 private:
+  int currentChunkId;
   string curFileName;
   string tableName;
   int fileIndex;

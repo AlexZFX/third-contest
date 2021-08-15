@@ -31,7 +31,6 @@ private:
   mutable std::mutex _mutex;
   int successChunkId; // 已完成的 chunkid 号，在这之前的 chunk 都不再做任何处理
 
-
 public:
 
   int loadFileIndex;

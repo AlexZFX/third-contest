@@ -30,17 +30,10 @@ public:
    * @param uniq
    */
   bool putIfAbsent(const int *ids) {
-    int total = sizeof(*ids);
-
-    if (total != _indexNum) {
-      cout << "index size must be : " << _indexNum << ", but actually : " << total << endl;
-      return false;
-    }
-
     long preMin = 0;
     long preMax = 0;
 
-    for (int i = 0; i < total; ++i) {
+    for (int i = 0; i < _indexNum; ++i) {
       Index idx = _index[i];
       const long val = ids[i];
       preMin = preMax;
@@ -60,8 +53,13 @@ public:
     return true;
   }
 
+  /**
+   *
+   * @param ids
+   * @return
+   */
   bool checkExistsNoLock(const int *ids) {
-
+    // TODO
   }
 
 private:
@@ -86,6 +84,8 @@ private:
    * bitmap 统一存储对象
    */
   map<TABLE_ID, BitmapItem *> _itemMap;
+
+  // bitMapManager 的 snapshot
 
 public:
   BitmapManager() = default;
