@@ -25,6 +25,8 @@ int LineFilter::run() {
         auto line = chunk->m_lines.top();
         auto tableId = line->table;
         // 存在的话无需处理了
+
+        // 实际上Bitmap只在这里出现过写操作，而 LineFilter 又是一个单线程的处理操作，因此这里可以直接调用BitmapManager的doSnapshot操作
         if (!g_bitmapManager->putIfAbsent(tableId, line->idxs)) {
           delete line; // 这个东西得及时处理掉
           continue;
@@ -33,12 +35,8 @@ int LineFilter::run() {
         // push to dst queue
         chunk->m_lines.pop();
       }
-      // bitmapSnapShot
-      // 写到 bitMapManger -> queue -> pop
-      // SnapShot->id = chunkId
 
-      // 所有 loadFileWriter -> min(chunkId) > queuePop;
-
+      g_bitmapManager->doSnapshot();
     }
   }
   return 0;

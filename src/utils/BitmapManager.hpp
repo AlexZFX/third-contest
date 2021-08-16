@@ -1,28 +1,29 @@
 
 #include <iostream>
-#include <string>
+#include <map>
 #include <mutex>
 #include <shared_mutex>
-#include <map>
+#include <string>
 
 
-#include "entity/Index.h"
 #include "common/Common.h"
+#include "entity/Index.h"
 
 using namespace std;
 
 
 class BitmapItem {
 
-public:
+  public:
   BitmapItem(long max, Index index[], int indexNum) {
+    _max = max;
     _bits = new char[max];
     _index = index;
     _indexNum = indexNum;
   }
 
   ~BitmapItem() {
-    delete[]_bits;
+    delete[] _bits;
   }
 
   /**
@@ -60,36 +61,56 @@ public:
    * @return if exist return true, otherwise return false
    */
   bool checkExistsNoLock(const int *ids) {
-      long preMin = 0;
-      long preMax = 0;
+    long preMin = 0;
+    long preMax = 0;
 
-      for (int i = 0; i < _indexNum; ++i) {
-          Index idx = _index[i];
-          const long val = ids[i];
-          preMin = preMax;
-          preMax += idx.getMax();
+    for (int i = 0; i < _indexNum; ++i) {
+      Index idx = _index[i];
+      const long val = ids[i];
+      preMin = preMax;
+      preMax += idx.getMax();
 
-          if (_bits[preMin + val] == 1) {
-              return true;
-          }
-          preMax++;
+      if (_bits[preMin + val] == 1) {
+        return true;
       }
-      return false;
+      preMax++;
+    }
+    return false;
   }
 
-private:
+
+  private:
   char *_bits;
 
   int _indexNum;
 
+  long _max;
+
   Index *_index;
 
   std::mutex _lock;
+
+  public:
+  char *getBits() const {
+    return _bits;
+  }
+  void setBits(char *bits) {
+    _bits = bits;
+  }
+  int getIndexNum() const {
+    return _indexNum;
+  }
+  Index *getIndex() const {
+    return _index;
+  }
+  long getMax() const {
+    return _max;
+  }
 };
 
 
 class BitmapManager {
-private:
+  private:
   /**
    * 读写锁
    */
@@ -101,8 +122,9 @@ private:
   map<TABLE_ID, BitmapItem *> _itemMap;
 
   // bitMapManager 的 snapshot
+  stack<char *> _lastSnapshot;
 
-public:
+  public:
   BitmapManager() = default;
 
   ~BitmapManager() = default;
@@ -150,16 +172,55 @@ public:
    *
    */
   void doSnapshot() {
+    lock.lock();
+    long maxCharArr = 0;
+    for (auto &item : _itemMap) {
+      maxCharArr += item.second->getMax();
+    }
 
+    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
+    char *serialBitArr = new char [maxCharArr + 8 * 4];
+    long pos = 0;
+
+    map<TABLE_ID, char *> bitData = map<TABLE_ID, char *>();
+    for (auto &item : _itemMap) {
+      char *copyInfo = new char[item.second->getMax() + 3];
+      memcpy(copyInfo + 2, item.second->getBits(), item.second->getMax());
+      copyInfo[0] = item.first;
+      copyInfo[1] = '@';
+      copyInfo[item.second->getMax() + 2] = '#';
+      memcpy(serialBitArr + pos, copyInfo, item.second->getMax() + 3);
+      pos += (item.second->getMax() + 3);
+    }
+
+    // 将最新的 snapshot 压到栈中
+    _lastSnapshot.push(serialBitArr);
+
+    lock.unlock();
   }
 
   /**
    *
    */
-  void loadSnapshot() {
+  void loadSnapshot(char * data) {
+    long total = sizeof(*data);
+    long prePos = 0;
 
+    lock.lock();
+
+    for (long i = 0; i < total; i ++) {
+      if (data[i] == '#') {
+        char *tmp = new char [i - prePos];
+        memcpy(tmp, data + prePos, i - prePos);
+        auto id = static_cast<TABLE_ID>(tmp[0]);
+
+        // 加载新的 bitmap 的snapshot 到本地
+        _itemMap[id]->setBits(tmp + 2);
+      }
+    }
+
+    lock.unlock();
   }
 };
 
 extern BitmapManager *g_bitmapManager;
-

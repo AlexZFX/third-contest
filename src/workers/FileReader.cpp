@@ -6,10 +6,10 @@
 #include <string.h>
 #include <vector>
 
-#include "entity/Table.h"
-#include "entity/Column.h"
+#include "../entity/Table.h"
+#include "../entity/Column.h"
 #include "FileReader.h"
-#include "utils/BitmapManager.hpp"
+#include "../utils/BitmapManager.hpp"
 
 extern unordered_map<string, Table *> g_tableMap;
 
