@@ -12,15 +12,16 @@
 #include "../entity/Table.h"
 #include "../utils/BaseThread.h"
 #include "../utils/ThreadSafeQueue.h"
+#include "../utils/ChunkSet.h"
 
 class LineFilter : public BaseThread {
 private:
   Table *table;
-  ThreadSafeQueue<FileChunk *> *m_chunkQueue;
+  ChunkSet *m_chunkQueue;
 
 public:
 
-  explicit LineFilter(ThreadSafeQueue<FileChunk *> *chunkQueue) : m_chunkQueue(chunkQueue) {
+  explicit LineFilter(ChunkSet *chunkQueue) : m_chunkQueue(chunkQueue) {
   }
 
   Table *getTable() const {

@@ -9,13 +9,14 @@
 #include "../common/FileChunk.h"
 #include "../utils/BaseThread.h"
 #include "../utils/ThreadSafeQueue.h"
+#include "../utils/ChunkSet.h"
 
 class FileReader : public BaseThread {
 private:
 
   ThreadSafeQueue<FileChunk *> *m_chunkQueuePtr;
 
-  ThreadSafeQueue<FileChunk *> *m_dstChunkQueuePtr;
+  ChunkSet *m_dstChunkQueuePtr;
 
   void dealLine(char *start);
 
@@ -23,7 +24,7 @@ private:
 
 public:
 
-  explicit FileReader(ThreadSafeQueue<FileChunk *> *chunkQueuePtr, ThreadSafeQueue<FileChunk *> *dstChunkQueuePtr)
+  explicit FileReader(ThreadSafeQueue<FileChunk *> *chunkQueuePtr, ChunkSet *dstChunkQueuePtr)
     : m_chunkQueuePtr(chunkQueuePtr), m_dstChunkQueuePtr(dstChunkQueuePtr) {};
 
   ~FileReader() = default;
@@ -44,7 +45,7 @@ private:
   int m_threadNum;
   FileReader *workers[100]{};
 public:
-  FileReaderMgn(int threadNum, ThreadSafeQueue<FileChunk *> *queuePtr, ThreadSafeQueue<FileChunk *> *dstQueuePtr)
+  FileReaderMgn(int threadNum, ThreadSafeQueue<FileChunk *> *queuePtr, ChunkSet *dstQueuePtr)
     : m_threadNum(
     threadNum) {
     for (int i = 0; i < m_threadNum; ++i) {

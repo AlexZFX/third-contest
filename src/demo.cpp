@@ -19,6 +19,7 @@
 #include "workers/LoadDataWorker.h"
 #include "workers/FileReader.h"
 #include "workers/LineFilter.h"
+#include "utils/ChunkSet.h"
 
 using namespace std;
 
@@ -100,7 +101,6 @@ int main(int argc, char *argv[]) {
   cout << "[Start]\tload and clean data." << endl;
   // load 的过程中进行数据清洗
   long startTime = getCurrentLocalTimeStamp();
-  g_bitmapManager = new BitmapManager();
   MetadataManager manager;
   if (!manager.init(g_conf.outputDir)) {
     LogError("metadata init failed, return -1");
@@ -116,8 +116,9 @@ int main(int argc, char *argv[]) {
     return ns1 > ns2;
   });
   auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
-  auto afterReadChunkQueue = new ThreadSafeQueue<FileChunk *>(); // read 完的 queue，bitManager 的前置queue
+  auto chunkSet = new ChunkSet(manager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
   auto loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
+  g_bitmapManager = new BitmapManager(); // 全局bitmap
   // 后续 splitter 是可以优化掉的，只在第一次启动的时候run，后续重启不需要再run一遍，只要记录下来就行
   FileSplitter splitter(readFiles, chunkQueue);
   splitter.start();
@@ -127,11 +128,12 @@ int main(int argc, char *argv[]) {
   LoadDataWorkerMgn loadDataMgn(10, loadDataFileNameQueue);
   loadDataMgn.start();
   // 读文件读线程
-  FileReaderMgn fileReaderMgn(10, chunkQueue, afterReadChunkQueue);
+  FileReaderMgn fileReaderMgn(10, chunkQueue, chunkSet);
   fileReaderMgn.start();
 
-  LineFilter lineFilter(afterReadChunkQueue); // 单线程的filter，过滤record
+  LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record
   lineFilter.start();
+
 
 
   loadDataMgn.join();
