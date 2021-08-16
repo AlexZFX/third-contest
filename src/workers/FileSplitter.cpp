@@ -37,7 +37,7 @@ int FileSplitter::run() {
     close(fd);
     if (memFile == MAP_FAILED) {
       // TODO 这里 mmap 失败，是否直接退出
-      cout << "[ERROR] do mmap failed " << endl;
+        LogError("[ERROR] do mmap failed");
       return -1;
     }
     long start = st.st_size - PerChunkSize, end = st.st_size;

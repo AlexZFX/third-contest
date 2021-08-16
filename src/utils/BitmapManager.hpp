@@ -6,8 +6,8 @@
 #include <map>
 
 
-#include "../entity/Index.h"
-#include "../common/Common.h"
+#include "entity/Index.h"
+#include "common/Common.h"
 
 using namespace std;
 
@@ -54,12 +54,27 @@ public:
   }
 
   /**
+   * 无锁判断某个记录是否在 bitmap 中
    *
    * @param ids
-   * @return
+   * @return if exist return true, otherwise return false
    */
   bool checkExistsNoLock(const int *ids) {
-    // TODO
+      long preMin = 0;
+      long preMax = 0;
+
+      for (int i = 0; i < _indexNum; ++i) {
+          Index idx = _index[i];
+          const long val = ids[i];
+          preMin = preMax;
+          preMax += idx.getMax();
+
+          if (_bits[preMin + val] == 1) {
+              return true;
+          }
+          preMax++;
+      }
+      return false;
   }
 
 private:
@@ -146,5 +161,5 @@ public:
   }
 };
 
-BitmapManager *BitmapMgn;
+BitmapManager *g_bitmapManager;
 

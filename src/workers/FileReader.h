@@ -37,12 +37,6 @@ public:
    */
   int readChunk(FileChunk *chunk);
 
-  /**
-   * 按行读取每条记录
-   * @return {@link BatchLineRecord}
-   */
-  struct BatchLineRecord *readLines();
-
 };
 
 class FileReaderMgn : public BaseThread {
