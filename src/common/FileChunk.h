@@ -14,19 +14,19 @@
 
 class LineRecord {
 public:
-    OPERATION operation{};
-    TABLE_ID table;
-    int chunkId;
-    int idxs[4];
-    int datetimeStartPos;
-    char *memFile;
-    int size;
+  OPERATION operation{};
+  TABLE_ID table;
+  int chunkId;
+  int idxs[4];
+  int datetimeStartPos;
+  char *memFile;
+  int size;
 
-    LineRecord() {
-    }
+  LineRecord() {
+  }
 
-    ~LineRecord() {
-    }
+  ~LineRecord() {
+  }
 };
 
 /**
@@ -37,68 +37,69 @@ public:
 class FileChunk {
 
 private:
-    char *_memFile{};
-    int _chunkNo;
-    bool _isLast;
-    long _startPos;
-    long _endPos;
-    long _memReadPos; //内存中读指针的位置信息
-    long _fileSize;
-    long _persisReadPos; //元数据中读指针的位置信息，只有对应的行被处理并持久化到对应的load-data文件中之后，触发其更新
+  char *_memFile{};
+  int _chunkNo;
+  bool _isLast;
+  long _startPos;
+  long _endPos;
+  long _memReadPos; //内存中读指针的位置信息
+  long _fileSize;
+  long _persisReadPos; //元数据中读指针的位置信息，只有对应的行被处理并持久化到对应的load-data文件中之后，触发其更新
 
 public:
 
-    std::stack<LineRecord *> m_lines; // 需要被处理的行，按顺序插入，这样可以逆序处理
+  std::stack<LineRecord *> m_lines; // 需要被处理的行，按顺序插入，这样可以逆序处理
 
-    FileChunk(int chunkNo, char *_mem_file, long startPos, long endPos, long fileSize, bool isLast) {
-        _chunkNo = chunkNo;
-        _startPos = startPos;
-        _endPos = endPos;
-        _memReadPos = startPos;
-        _persisReadPos = _memReadPos;
-        _fileSize = fileSize;
-        _isLast = isLast;
-    }
+  FileChunk(int chunkNo, char *_mem_file, long startPos, long endPos, long fileSize, bool isLast) {
+    _memFile = _mem_file;
+    _chunkNo = chunkNo;
+    _startPos = startPos;
+    _endPos = endPos;
+    _memReadPos = startPos;
+    _persisReadPos = _memReadPos;
+    _fileSize = fileSize;
+    _isLast = isLast;
+  }
 
-    /**
-     * 更新并保存当前可以被持久化的读指针位置，这里最好使用异步调用的方式
-     * @param readPos
-     * @return
-     */
-    int updateAndSavePos(long readPos) {
-        _persisReadPos = readPos;
-        return 0;
-    }
+  /**
+   * 更新并保存当前可以被持久化的读指针位置，这里最好使用异步调用的方式
+   * @param readPos
+   * @return
+   */
+  int updateAndSavePos(long readPos) {
+    _persisReadPos = readPos;
+    return 0;
+  }
 
-    void release() {
-        if (_isLast) {
-            munmap(_memFile, _fileSize);
-        }
+  void release() {
+    if (_isLast) {
+      munmap(_memFile, _fileSize);
     }
+  }
 
-    int getChunkNo() const {
-        return _chunkNo;
-    }
+  int getChunkNo() const {
+    return _chunkNo;
+  }
 
-    long getStartPos() const {
-        return _startPos;
-    }
+  long getStartPos() const {
+    return _startPos;
+  }
 
-    long getEndPos() const {
-        return _endPos;
-    }
+  long getEndPos() const {
+    return _endPos;
+  }
 
-    long getMemReadPos() const {
-        return _memReadPos;
-    }
+  long getMemReadPos() const {
+    return _memReadPos;
+  }
 
-    char *getMamFile() {
-        return _memFile;
-    }
+  char *getMamFile() {
+    return _memFile;
+  }
 
-    void addLine(LineRecord *line) {
-        m_lines.push(line);
-    }
+  void addLine(LineRecord *line) {
+    m_lines.push(line);
+  }
 };
 
 #endif //THIRD_CONTEST_FILECHUNK_H

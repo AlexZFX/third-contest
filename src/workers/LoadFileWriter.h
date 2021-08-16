@@ -26,72 +26,76 @@ using namespace std;
  */
 class LoadFileWriter : public BaseThread {
 private:
-    int currentChunkId;
-    string curFileName;
-    string tableName;
-    int fileIndex;
-    int32_t maxFileSize;
-    int32_t size;
-    char *fileStartPtr;
-    char *curFilePtr;
+  int currentChunkId;
+  string curFileName;
+  string tableName;
+  TABLE_ID tableId;
+  int fileIndex;
+  int32_t maxFileSize;
+  int32_t size;
+  char *fileStartPtr;
+  char *curFilePtr;
 
-    ThreadSafeQueue<LineRecord *> *lineQueue;
-    ThreadSafeQueue<std::string> *dstFileQueue;
+  ThreadSafeQueue<LineRecord *> *lineQueue;
+  ThreadSafeQueue<std::string> *dstFileQueue;
 
 public:
 
-    LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr, ThreadSafeQueue<LineRecord *> *lineQueuePtr)
-            : tableName(std::move(table)), fileIndex(0),
-              maxFileSize(LoadFileSize), size(0),
-              dstFileQueue(queuePtr),
-              lineQueue(lineQueuePtr) {
-        curFileName = tableName + "_" + to_string(fileIndex);
-        int fd = open(curFileName.c_str(), O_WRONLY);
-        fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
-        close(fd);
-        curFilePtr = fileStartPtr;
-    }
+  LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr, ThreadSafeQueue<LineRecord *> *lineQueuePtr)
+    : tableName(std::move(table)), fileIndex(0),
+      maxFileSize(LoadFileSize), size(0),
+      dstFileQueue(queuePtr),
+      lineQueue(lineQueuePtr) {
+    tableId = getTableIdByName(tableName);
+    curFileName = tableId + "_" + to_string(fileIndex);
+    int fd = open(curFileName.c_str(), O_WRONLY);
+    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
+    close(fd);
+    curFilePtr = fileStartPtr;
+  }
 
-    int run();
+  int run();
 
-    // 把一个处理好的line写入到文件里面
-    //TODO 这里存在一个问题，最后一个数据有可能无法满足 size 的条件进而导致存在残留数据无法处理
-    bool write(LineRecord *line) {
-        lineQueue->enqueue(line);
-    }
+  // 把一个处理好的line写入到文件里面
+  //TODO 这里存在一个问题，最后一个数据有可能无法满足 size 的条件进而导致存在残留数据无法处理
+  bool write(LineRecord *line) {
+    lineQueue->enqueue(line);
+  }
+
+  void switchLoadFile();
 
 };
 
 class LoadFileWriterMgn : public BaseThread {
 private:
-    map<string, LoadFileWriter *> workers;
+  map<string, LoadFileWriter *> workers;
 public:
-    LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
-        for (const auto &item : g_tableMap) {
-            workers[item.second->getTableName()] = new LoadFileWriter(item.second->getTableName(), queuePtr,
-                                                                      new ThreadSafeQueue<LineRecord *>());
-        }
+  LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
+    for (const auto &item : g_tableMap) {
+      workers[item.second->getTableName()] = new LoadFileWriter(item.second->getTableName(), queuePtr,
+                                                                new ThreadSafeQueue<LineRecord *>());
     }
+  }
 
-    ~LoadFileWriterMgn() {
-        for (auto &worker : workers) {
-            delete worker.second;
-        }
+  ~LoadFileWriterMgn() {
+    for (auto &worker : workers) {
+      delete worker.second;
     }
+  }
 
-    int run() override {
-        for (auto &worker : workers) {
-            worker.second->start();
-        }
-        for (auto &worker : workers) {
-            worker.second->join();
-        }
+  int run() override {
+    for (auto &worker : workers) {
+      worker.second->start();
     }
+    for (auto &worker : workers) {
+      worker.second->join();
+    }
+  }
 
-    void doWrite(const string &table, LineRecord *record) {
-        LoadFileWriter *writer = workers[table];
-        writer->write(record);
-    }
+  void doWrite(const string &table, LineRecord *record) {
+    LoadFileWriter *writer = workers[table];
+    writer->write(record);
+  }
 };
 
 #endif //THIRD_CONTEST_LOADFILEWRITER_H

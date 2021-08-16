@@ -20,6 +20,7 @@
 #include "workers/FileReader.h"
 #include "workers/LineFilter.h"
 #include "utils/ChunkSet.h"
+#include "workers/LoadFileWriter.h"
 
 using namespace std;
 
@@ -106,6 +107,8 @@ int main(int argc, char *argv[]) {
     LogError("metadata init failed, return -1");
     return -1;
   }
+  g_bitmapManager = new BitmapManager(); // 全局bitmap
+  initTableMap(g_tableMap);
   // 其他的启动全都依赖于 manager信息ok否
   std::vector<string> readFiles;
   getFileNames(g_conf.inputDir, readFiles, SOURCE_FILE_NAME_TEMPLATE);
@@ -118,7 +121,6 @@ int main(int argc, char *argv[]) {
   auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
   auto chunkSet = new ChunkSet(manager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
   auto loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
-  g_bitmapManager = new BitmapManager(); // 全局bitmap
   // 后续 splitter 是可以优化掉的，只在第一次启动的时候run，后续重启不需要再run一遍，只要记录下来就行
   FileSplitter splitter(readFiles, chunkQueue);
   splitter.start();
@@ -134,6 +136,8 @@ int main(int argc, char *argv[]) {
   LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record
   lineFilter.start();
 
+  LoadFileWriterMgn loadFileWriterMgn(loadDataFileNameQueue);
+  loadFileWriterMgn.start();
 
 
   loadDataMgn.join();

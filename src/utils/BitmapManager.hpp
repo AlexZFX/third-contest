@@ -1,9 +1,9 @@
 
 #include <iostream>
-#include <map>
+#include <string>
 #include <mutex>
 #include <shared_mutex>
-#include <string>
+#include <map>
 
 
 #include "common/Common.h"
@@ -14,16 +14,16 @@ using namespace std;
 
 class BitmapItem {
 
-  public:
-  BitmapItem(long max, Index index[], int indexNum) {
+public:
+  BitmapItem(long max, std::vector<Index> indexs, int indexNum) {
     _max = max;
-    _bits = new char[max];
-    _index = index;
+    _bits = new char[max]{0};
+    _index = std::move(indexs);
     _indexNum = indexNum;
   }
 
   ~BitmapItem() {
-    delete[] _bits;
+    delete[]_bits;
   }
 
   /**
@@ -78,7 +78,6 @@ class BitmapItem {
     return false;
   }
 
-
   private:
   char *_bits;
 
@@ -86,7 +85,7 @@ class BitmapItem {
 
   long _max;
 
-  Index *_index;
+  std::vector<Index> _index;
 
   std::mutex _lock;
 
@@ -100,9 +99,11 @@ class BitmapItem {
   int getIndexNum() const {
     return _indexNum;
   }
-  Index *getIndex() const {
+
+  const std::vector<Index> &getIndex() const {
     return _index;
   }
+
   long getMax() const {
     return _max;
   }
@@ -110,7 +111,7 @@ class BitmapItem {
 
 
 class BitmapManager {
-  private:
+private:
   /**
    * 读写锁
    */
@@ -124,7 +125,7 @@ class BitmapManager {
   // bitMapManager 的 snapshot
   stack<char *> _lastSnapshot;
 
-  public:
+public:
   BitmapManager() = default;
 
   ~BitmapManager() = default;
@@ -135,14 +136,13 @@ class BitmapManager {
    * @param schema
    * @param table
    */
-  void registerBitmap(TABLE_ID tableId, Index *index) {
-    int total = sizeof(*index);
+  void registerBitmap(TABLE_ID tableId, std::vector<Index> &indexs) {
+    int total = indexs.size();
     long max = 0;
     for (int i = 0; i < total; i++) {
-      max += index[i].getMax();
+      max += indexs[i].getMax();
     }
-    BitmapItem tmpItem(max, index, total);
-    BitmapItem *item = &tmpItem;
+    auto item = new BitmapItem(max, indexs, total);
     _itemMap[tableId] = item;
   }
 

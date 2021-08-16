@@ -15,8 +15,17 @@
  * @return
  */
 bool MetadataManager::init(const std::string &path) {
+  int ret = mkdir(path.c_str(), ACCESSPERMS);
+  if (ret && errno == EEXIST) {
+    LogDebug("dir: %s exists", path.c_str());
+  } else if (ret) {
+    LogError("create dir: %s error ret: %d, info: %s: ", path.c_str(), ret, strerror(errno));
+    return false;
+  } else {
+    LogInfo("create dir success: %s", path.c_str());
+  }
   std::string metaPath = path + METADIR;
-  int ret = mkdir(metaPath.c_str(), ACCESSPERMS);
+  ret = mkdir(metaPath.c_str(), ACCESSPERMS);
   if (ret && errno == EEXIST) {
     LogDebug("dir: %s exists", metaPath.c_str());
   } else if (ret) {

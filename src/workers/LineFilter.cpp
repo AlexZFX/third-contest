@@ -18,9 +18,6 @@ int LineFilter::run() {
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
       FileChunk *chunk = chunks[i];
-      if (chunk == nullptr) {
-        continue;
-      }
       while (!chunk->m_lines.empty()) {
         auto line = chunk->m_lines.top();
         auto tableId = line->table;
