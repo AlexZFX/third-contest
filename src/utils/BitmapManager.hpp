@@ -161,5 +161,5 @@ public:
   }
 };
 
-BitmapManager *g_bitmapManager;
+extern BitmapManager *g_bitmapManager;
 

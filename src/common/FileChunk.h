@@ -10,6 +10,7 @@
 
 #include "metadata.h"
 #include <stack>
+#include "common/Common.h"
 
 class LineRecord {
 public:

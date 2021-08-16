@@ -1,12 +1,8 @@
 #include "newmysql.h"
-#include "logger.h"
-#include <errmsg.h>
 #include <mysqld_error.h>
 #include <cstdio>
 #include <algorithm>
 #include "strings.hpp"
-#include "my_const.h"
-#include "../utils/Util.h"
 
 //获取系统启动以来的时间，单位为毫秒
 inline uint64_t getMonotonic_msec() {

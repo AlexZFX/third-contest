@@ -8,7 +8,9 @@
 #include <vector>
 #include <cstdint>
 #include "../utils/baseerror.h"
-#include "../common/mysql.h"
+#include "mysql.h"
+#include "../utils/Util.h"
+#include "logger.h"
 
 
 using namespace std;

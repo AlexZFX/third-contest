@@ -8,7 +8,8 @@
 #include <map>
 #include <string>
 #include <mutex>
-
+#include "../utils/logger.h"
+#include "../common/Common.h"
 #include "common/FileChunk.h"
 #include "../utils/BaseThread.h"
 
@@ -29,13 +30,13 @@ class MetadataManager : public BaseThread {
 private:
   /* data */
   mutable std::mutex _mutex;
-  int successChunkId; // 已完成的 chunkid 号，在这之前的 chunk 都不再做任何处理
+  int successChunkIdFileFd;
 
 public:
 
   int loadFileIndex;
 
-  int successChunkIndex;
+  int successChunkIndex;  // 已完成的 chunkid 号，在这之前的 chunk 都不再做任何处理
 
   MetadataManager(/* args */) : loadFileIndex(0), successChunkIndex(0) {};
 

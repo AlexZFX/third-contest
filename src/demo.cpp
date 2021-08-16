@@ -25,6 +25,7 @@ using namespace std;
 DtsConf g_conf;
 ThreadPool *g_threadPool;
 unordered_map<string, Table *> g_tableMap;
+BitmapManager *g_bitmapManager;
 
 /**
  * 初始化参数
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]) {
   cout << "[Start]\tload and clean data." << endl;
   // load 的过程中进行数据清洗
   long startTime = getCurrentLocalTimeStamp();
+  g_bitmapManager = new BitmapManager();
   MetadataManager manager;
   if (!manager.init(g_conf.outputDir)) {
     LogError("metadata init failed, return -1");
