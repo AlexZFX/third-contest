@@ -21,56 +21,60 @@ bool LoadDataWorker::init() {
   int port = atoi(g_conf.outputDbUrl.substr(g_conf.outputDbUrl.find_last_of(':') + 1,
                                             g_conf.outputDbUrl.find_last_of('/') -
                                             g_conf.outputDbUrl.find_last_of(':') - 1).c_str());
-  m_mysql->init(url, port, g_conf.outputDbUser, g_conf.outputDbPass, 3600, database, "utf8mb4");
+  return m_mysql->init(url, port, g_conf.outputDbUser, g_conf.outputDbPass, 3600, database, "utf8mb4");
 }
 
 
 int LoadDataWorker::run() {
   while (m_threadstate) {
-    string fileName;
-    m_queuePtr->dequeue(1000, fileName);
+    string fileName = "";
+    m_queuePtr->dequeue(1, fileName);
     if (fileName.empty()) {
+      if (g_conf.loadFileWriteFinish) {
+        LogInfo("load data worker load finished, will exit");
+        return 0;
+      }
       LogInfo("get empty file name, will continue and retry");
       continue;
     }
     char buf[1024] = {0};
-    string tableName = fileName.substr(0, fileName.find_first_of('_'));
+    string tableName = fileName.substr(fileName.find_last_of(SLASH_SEPARATOR) + 1, fileName.find_first_of('_'));
     auto tableId = static_cast<TABLE_ID>(stoi(tableName));
     switch (tableId) {
-      case TABLE_WAREHOUSE_ID: {
-        sprintf(buf, WAREHOUSE_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_WAREHOUSE_ID: {
+        sprintf(buf, WAREHOUSE_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_ORDERS_LINE_ID: {
-        sprintf(buf, ORDER_LINE_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_ORDERS_LINE_ID: {
+        sprintf(buf, ORDER_LINE_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_DISTRICT_ID: {
-        sprintf(buf, DISTRICT_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_DISTRICT_ID: {
+        sprintf(buf, DISTRICT_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_CUSTOMER_ID: {
-        sprintf(buf, CUSTOMER_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_CUSTOMER_ID: {
+        sprintf(buf, CUSTOMER_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_NEW_ORDERS_ID: {
-        sprintf(buf, NEW_ORDERS_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_NEW_ORDERS_ID: {
+        sprintf(buf, NEW_ORDERS_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_ORDERS_ID: {
-        sprintf(buf, ORDERS_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_ORDERS_ID: {
+        sprintf(buf, ORDERS_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_ITEM_ID: {
-        sprintf(buf, ITEM_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_ITEM_ID: {
+        sprintf(buf, ITEM_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_STOCK_ID: {
-        sprintf(buf, STOCK_LOAD_SQL.c_str(), tableName.c_str());
+      case TABLE_ID::TABLE_STOCK_ID: {
+        sprintf(buf, STOCK_LOAD_SQL.c_str(), fileName.c_str());
         break;
       }
-      case TABLE_UNKNOWN: {
-        LogError("unknown table: %s", tableName.c_str());
+      case TABLE_ID::TABLE_UNKNOWN: {
+        LogError("unknown table: %s", fileName.c_str());
         break;
       }
     }

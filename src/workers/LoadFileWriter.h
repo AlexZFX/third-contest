@@ -16,8 +16,11 @@
 #include "../utils/Util.h"
 #include "../common/Common.h"
 #include "../utils/ThreadSafeQueue.h"
+#include "common/DtsConf.h"
 
 using namespace std;
+
+extern DtsConf g_conf;
 
 /**
  * 将行写到待loaddata处理的文件中
@@ -47,11 +50,14 @@ public:
       dstFileQueue(queuePtr),
       lineQueue(lineQueuePtr) {
     tableId = getTableIdByName(tableName);
-    curFileName = tableId + "_" + to_string(fileIndex);
-    int fd = open(curFileName.c_str(), O_WRONLY);
-    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
-    close(fd);
+    curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
+                  to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
+    int fd = open(curFileName.c_str(), O_CREAT | O_RDWR, 0666); // 先不 close
+    lseek(fd, maxFileSize, SEEK_END);
+    ::write(fd, "", 1);
+    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
     curFilePtr = fileStartPtr;
+    close(fd);
   }
 
   int run();
@@ -68,12 +74,12 @@ public:
 
 class LoadFileWriterMgn : public BaseThread {
 private:
-  map<string, LoadFileWriter *> workers;
+  unordered_map<TABLE_ID, LoadFileWriter *, TABLE_ID_HASH> workers;
 public:
   LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
     for (const auto &item : g_tableMap) {
-      workers[item.second->getTableName()] = new LoadFileWriter(item.second->getTableName(), queuePtr,
-                                                                new ThreadSafeQueue<LineRecord *>());
+      workers[item.first] = new LoadFileWriter(item.second->getTableName(), queuePtr,
+                                               new ThreadSafeQueue<LineRecord *>());
     }
   }
 
@@ -90,10 +96,11 @@ public:
     for (auto &worker : workers) {
       worker.second->join();
     }
+    return 0;
   }
 
-  void doWrite(const string &table, LineRecord *record) {
-    LoadFileWriter *writer = workers[table];
+  void doWrite(LineRecord *record) {
+    LoadFileWriter *writer = workers[record->table];
     writer->write(record);
   }
 };

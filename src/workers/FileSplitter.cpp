@@ -19,6 +19,8 @@
 
 using namespace std;
 
+extern int g_maxChunkId;
+
 int FileSplitter::run() {
   // 所有的 file 共用一个chunkid序列号，拆分后的每一个chunk都应该是一样的
   int64_t startTime = getCurrentLocalTimeStamp();
@@ -51,13 +53,13 @@ int FileSplitter::run() {
         ++startPos;
       }
       ++startPos;
-      auto chunk = new FileChunk(chunkNo, memFile, startPos, endPos - 1, st.st_size, false);
+      auto chunk = new FileChunk(chunkNo++, memFile, startPos, endPos - 1, st.st_size, false);
       dstQueuePtr->enqueue(chunk);
       start = end - PerChunkSize;
       end = startPos;
     }
     // 第一块
-    auto chunk = new FileChunk(chunkNo, memFile, 0, end - 1, st.st_size, true);
+    auto chunk = new FileChunk(chunkNo++, memFile, 0, end - 1, st.st_size, true);
     dstQueuePtr->enqueue(chunk);
     /*
     for (int i = 0; i < st.st_size; i++) {
@@ -96,6 +98,8 @@ int FileSplitter::run() {
     int64_t fileEndTime = getCurrentLocalTimeStamp();
     LogDebug("splitter deal file: %s cost time %lld,", name.c_str(), fileEndTime - fileStartTime);
   }
+  // 记录下最大的chunkNo
+  g_maxChunkId = chunkNo - 1;
   int64_t endTime = getCurrentLocalTimeStamp();
   LogDebug("split all file cost time %lld,", endTime - startTime);
   return 0;

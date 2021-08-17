@@ -21,12 +21,7 @@
 
 using namespace std;
 
-extern unordered_map<string, Table *> g_tableMap;
-
-inline const Table *getTableDesc(const string &tablename) {
-  const Table *table = g_tableMap[tablename];
-  return table;
-}
+extern unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> g_tableMap;
 
 #define SecSnprintf(buf, len, fmt, args...)    snprintf(buf,(len)-1,fmt,##args)
 #define SecSprintf(buf, fmt, args...)    snprintf(buf,sizeof((buf))-1,fmt,##args)
@@ -91,7 +86,7 @@ inline std::vector<std::string> tokenize(const std::string &s, char delims, size
 }
 
 // hard code，写死8张表
-inline void initTableMap(unordered_map<string, Table *> &tableMap) {
+inline void initTableMap(unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> &tableMap) {
 
   /*
 customer:大约1500万行
@@ -125,12 +120,13 @@ Item:10万行
     warehouse->addColumn(w8);
     warehouse->addColumn(w9);
     warehouse->pksOrd.push_back(0);
-    tableMap["warehouse"] = warehouse;
+//    tableMap["warehouse"] = warehouse;
+    tableMap[TABLE_ID::TABLE_WAREHOUSE_ID] = warehouse;
 
     std::vector<Index> indexs = {
       /*w_id*/Index(0, 0, 500, -1)
     };
-    g_bitmapManager->registerBitmap(TABLE_WAREHOUSE_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_WAREHOUSE_ID, indexs);
 
   }
   // district
@@ -161,7 +157,8 @@ Item:10万行
     district->addColumn(d11);
     district->pksOrd.push_back(1);
     district->pksOrd.push_back(0);
-    tableMap["district"] = district;
+//    tableMap["district"] = district;
+    tableMap[TABLE_ID::TABLE_DISTRICT_ID] = district;
 
     /*
      | max(c_w_id) | max(c_d_id) | max(c_id) |
@@ -176,7 +173,7 @@ Item:10万行
 //      /*c_d_id*/Index(0, 0, 10, -1),
 //      /*c_id*/Index(0, 0, 3000, -1)
 //    };
-    g_bitmapManager->registerBitmap(TABLE_DISTRICT_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_DISTRICT_ID, indexs);
   }
   // customer
   {
@@ -227,7 +224,8 @@ Item:10万行
     customer->pksOrd.push_back(2);
     customer->pksOrd.push_back(1);
     customer->pksOrd.push_back(0);
-    tableMap["customer"] = customer;
+//    tableMap["customer"] = customer;
+    tableMap[TABLE_ID::TABLE_CUSTOMER_ID] = customer;
 
     /*
         | max(c_w_id) | max(c_d_id) | max(c_id)
@@ -239,7 +237,7 @@ Item:10万行
       /*c_d_id*/ Index(1, 0, 10, -1),
       /*c_id*/ Index(0, 0, 3000, -1)
     };
-    g_bitmapManager->registerBitmap(TABLE_CUSTOMER_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_CUSTOMER_ID, indexs);
   }
   // new_orders
   {
@@ -254,14 +252,15 @@ Item:10万行
     new_orders->pksOrd.push_back(2);
     new_orders->pksOrd.push_back(1);
     new_orders->pksOrd.push_back(0);
-    tableMap["new_orders"] = new_orders;
+//    tableMap["new_orders"] = new_orders;
+    tableMap[TABLE_ID::TABLE_NEW_ORDERS_ID] = new_orders;
 
     std::vector<Index> indexs = {
       /*no_w_id*/Index(2, 0, 500, -1),
       /*no_d_id*/Index(1, 0, 10, -1),
       /*no_o_id*/Index(0, 0, 3000, -1)
     };
-    g_bitmapManager->registerBitmap(TABLE_NEW_ORDERS_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_NEW_ORDERS_ID, indexs);
   }
   // orders
   {
@@ -286,14 +285,15 @@ Item:10万行
     orders->pksOrd.push_back(2);
     orders->pksOrd.push_back(1);
     orders->pksOrd.push_back(0);
-    tableMap["orders"] = orders;
+//    tableMap["orders"] = orders;
+    tableMap[TABLE_ID::TABLE_ORDERS_ID] = orders;
 
     std::vector<Index> indexs = {
       /*no_w_id*/Index(2, 0, 500, -1),
       /*no_d_id*/Index(1, 0, 10, -1),
       /*o_id*/Index(0, 0, 3000, -1)
     };
-    g_bitmapManager->registerBitmap(TABLE_ORDERS_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_ORDERS_ID, indexs);
   }
   // order_line
   {
@@ -323,7 +323,8 @@ Item:10万行
     order_line->pksOrd.push_back(1);
     order_line->pksOrd.push_back(0);
     order_line->pksOrd.push_back(3);
-    tableMap["order_line"] = order_line;
+//    tableMap["order_line"] = order_line;
+    tableMap[TABLE_ID::TABLE_ORDERS_LINE_ID] = order_line;
 
     /*
         | max(ol_w_id) | max(ol_d_id) | max(ol_o_id) | max(ol_number) |
@@ -336,7 +337,7 @@ Item:10万行
       /*ol_o_id*/Index(0, 3000, 10, -1),
       /*ol_number*/Index(3, 0, 15, -1)
     };
-    g_bitmapManager->registerBitmap(TABLE_ORDERS_LINE_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_ORDERS_LINE_ID, indexs);
   }
   // item
   {
@@ -354,7 +355,8 @@ Item:10万行
     item->addColumn(w5);
 
     item->pksOrd.push_back(0);
-    tableMap["item"] = item;
+//    tableMap["item"] = item;
+    tableMap[TABLE_ID::TABLE_ITEM_ID] = item;
 
     /*
      | max(i_id) |
@@ -362,7 +364,7 @@ Item:10万行
      */
 
     std::vector<Index> indexs = {/*i_id*/Index(0, 0, 100000, -1)};
-    g_bitmapManager->registerBitmap(TABLE_ITEM_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_ITEM_ID, indexs);
   }
   // stock
   {
@@ -404,13 +406,13 @@ Item:10万行
     stock->addColumn(w17);
     stock->pksOrd.push_back(1);
     stock->pksOrd.push_back(0);
-    tableMap["stock"] = stock;
+    tableMap[TABLE_ID::TABLE_STOCK_ID] = stock;
 
     std::vector<Index> indexs = {
       /*s_w_id*/Index(1, 0, 500, -1),
       /*s_i_id*/Index(0, 0, 100000, -1)
     };
-    g_bitmapManager->registerBitmap(TABLE_STOCK_ID, indexs);
+    g_bitmapManager->registerBitmap(TABLE_ID::TABLE_STOCK_ID, indexs);
   }
 }
 

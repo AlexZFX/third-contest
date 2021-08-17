@@ -26,8 +26,12 @@ using namespace std;
 
 DtsConf g_conf;
 ThreadPool *g_threadPool;
-unordered_map<string, Table *> g_tableMap;
+unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> g_tableMap;
 BitmapManager *g_bitmapManager;
+LoadFileWriterMgn *g_loadFileWriterMgn;
+int g_maxChunkId = INT32_MAX;
+int g_minChunkId = 0;
+
 
 /**
  * 初始化参数
@@ -127,17 +131,17 @@ int main(int argc, char *argv[]) {
   //
   manager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn(10, loadDataFileNameQueue);
+  LoadDataWorkerMgn loadDataMgn(1, loadDataFileNameQueue);
   loadDataMgn.start();
   // 读文件读线程
-  FileReaderMgn fileReaderMgn(10, chunkQueue, chunkSet);
+  FileReaderMgn fileReaderMgn(1, chunkQueue, chunkSet);
   fileReaderMgn.start();
 
   LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record
   lineFilter.start();
 
-  LoadFileWriterMgn loadFileWriterMgn(loadDataFileNameQueue);
-  loadFileWriterMgn.start();
+  g_loadFileWriterMgn = new LoadFileWriterMgn(loadDataFileNameQueue);
+  g_loadFileWriterMgn->start();
 
 
   loadDataMgn.join();

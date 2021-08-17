@@ -16,13 +16,12 @@ class LineRecord {
 public:
   OPERATION operation{};
   TABLE_ID table;
-  int chunkId;
   int idxs[4];
   int datetimeStartPos;
   char *memFile;
   int size;
 
-  LineRecord() {
+  LineRecord() : datetimeStartPos(-1) {
   }
 
   ~LineRecord() {

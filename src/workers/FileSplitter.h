@@ -23,11 +23,10 @@ private:
 
   ThreadSafeQueue<FileChunk *> *dstQueuePtr;
 
-
 public:
-  FileSplitter(std::vector<string> fileList, ThreadSafeQueue<FileChunk *> *queue) : waitDealFiles(std::move(fileList)),
-                                                                                    dstQueuePtr(queue) {
-  }
+  FileSplitter(std::vector<string> fileList,
+               ThreadSafeQueue<FileChunk *> *queue) : waitDealFiles(std::move(fileList)),
+                                                      dstQueuePtr(queue) {}
 
   /**
    * 开始执行文件分割

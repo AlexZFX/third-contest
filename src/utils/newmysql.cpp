@@ -221,7 +221,8 @@ bool CNewMysql::connect() {
     mysql_options(m_mysql, MYSQL_SET_CHARSET_NAME, m_charset.c_str());
     //  printf("mysql_options MYSQL_SET_CHARSET_NAME %s\n",m_charset.c_str());
   }
-
+  int localInfile = 1;
+  mysql_options(m_mysql, MYSQL_OPT_LOCAL_INFILE, &localInfile);
   if (!realConnect()) {
     close();
     return false;

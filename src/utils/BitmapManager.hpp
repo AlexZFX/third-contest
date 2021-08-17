@@ -1,9 +1,12 @@
 
+#ifndef THIRD_CONTEST_BITMAPMANAGER_H
+#define THIRD_CONTEST_BITMAPMANAGER_H
+
 #include <iostream>
 #include <string>
 #include <mutex>
 #include <shared_mutex>
-#include <map>
+#include <stack>
 
 
 #include "common/Common.h"
@@ -120,7 +123,7 @@ private:
   /**
    * bitmap 统一存储对象
    */
-  map<TABLE_ID, BitmapItem *> _itemMap;
+  unordered_map<TABLE_ID, BitmapItem *, TABLE_ID_HASH> _itemMap;
 
   // bitMapManager 的 snapshot
   stack<char *> _lastSnapshot;
@@ -182,11 +185,10 @@ public:
     char *serialBitArr = new char [maxCharArr + 8 * 4];
     long pos = 0;
 
-    map<TABLE_ID, char *> bitData = map<TABLE_ID, char *>();
     for (auto &item : _itemMap) {
       char *copyInfo = new char[item.second->getMax() + 3];
       memcpy(copyInfo + 2, item.second->getBits(), item.second->getMax());
-      copyInfo[0] = item.first;
+      copyInfo[0] = (char) item.first;
       copyInfo[1] = '@';
       copyInfo[item.second->getMax() + 2] = '#';
       memcpy(serialBitArr + pos, copyInfo, item.second->getMax() + 3);
@@ -224,3 +226,5 @@ public:
 };
 
 extern BitmapManager *g_bitmapManager;
+
+#endif

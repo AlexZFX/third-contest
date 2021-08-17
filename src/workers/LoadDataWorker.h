@@ -37,6 +37,7 @@ public:
   LoadDataWorkerMgn(int threadNum, ThreadSafeQueue<string> *queuePtr) : m_threadNum(threadNum) {
     for (int i = 0; i < m_threadNum; ++i) {
       workers[i] = new LoadDataWorker(queuePtr);
+      workers[i]->init();
     }
   }
 
@@ -53,6 +54,7 @@ public:
     for (int i = 0; i < m_threadNum; ++i) {
       workers[i]->join();
     }
+    return 0;
   }
 };
 

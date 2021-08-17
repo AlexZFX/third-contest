@@ -7,8 +7,6 @@
 #include <sys/stat.h>
 #include <sys/fcntl.h>
 
-#define METADIR "/meta"
-
 /**
  * 从对应目录下面init获取元数据
  * @param path
@@ -24,7 +22,7 @@ bool MetadataManager::init(const std::string &path) {
   } else {
     LogInfo("create dir success: %s", path.c_str());
   }
-  std::string metaPath = path + METADIR;
+  std::string metaPath = path + SLASH_SEPARATOR + META_DIR;
   ret = mkdir(metaPath.c_str(), ACCESSPERMS);
   if (ret && errno == EEXIST) {
     LogDebug("dir: %s exists", metaPath.c_str());
@@ -34,10 +32,21 @@ bool MetadataManager::init(const std::string &path) {
   } else {
     LogInfo("create dir success: %s", metaPath.c_str());
   }
+  std::string loadFilePath = path + SLASH_SEPARATOR + LOAD_FILE_DIR;
+  ret = mkdir(loadFilePath.c_str(), ACCESSPERMS);
+  if (ret && errno == EEXIST) {
+    LogDebug("dir: %s exists", loadFilePath.c_str());
+  } else if (ret) {
+    LogError("create dir: %s error ret: %d, info: %s: ", loadFilePath.c_str(), ret, strerror(errno));
+    return false;
+  } else {
+    LogInfo("create dir success: %s", loadFilePath.c_str());
+  }
   // 初始化元数据信息
   // maxSuccessChunkId
   string successChunkIdFilePath = metaPath + SLASH_SEPARATOR + SuccessChunkIdName;
-  successChunkIdFileFd = open(successChunkIdFilePath.c_str(), O_CREAT | O_RDWR);
+  LogInfo("chunkIdFilePath: %s", successChunkIdFilePath.c_str());
+  successChunkIdFileFd = open(successChunkIdFilePath.c_str(), O_CREAT | O_RDWR, 0666);
   char buf[20];
   read(successChunkIdFileFd, buf, 20);
   successChunkIndex = atoi(buf);

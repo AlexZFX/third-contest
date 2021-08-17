@@ -5,9 +5,6 @@
 #ifndef THIRD_CONTEST_LINEFILTER_H
 #define THIRD_CONTEST_LINEFILTER_H
 
-
-#include "map"
-
 #include "../common/FileChunk.h"
 #include "../entity/Table.h"
 #include "../utils/BaseThread.h"
