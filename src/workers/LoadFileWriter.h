@@ -17,6 +17,7 @@
 #include "../common/Common.h"
 #include "../utils/ThreadSafeQueue.h"
 #include "common/DtsConf.h"
+#include "boost/lockfree/spsc_queue.hpp"
 
 using namespace std;
 
@@ -40,6 +41,7 @@ private:
   char *curFilePtr;
 
   ThreadSafeQueue<LineRecord *> *lineQueue;
+//  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
   ThreadSafeQueue<std::string> *dstFileQueue;
 
 public:
@@ -52,7 +54,7 @@ public:
     tableId = getTableIdByName(tableName);
     curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
                   to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
-    int fd = open(curFileName.c_str(), O_CREAT | O_RDWR, 0666); // 先不 close
+    int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666); // 先不 close
     lseek(fd, maxFileSize, SEEK_END);
     ::write(fd, "", 1);
     fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
@@ -66,6 +68,7 @@ public:
   //TODO 这里存在一个问题，最后一个数据有可能无法满足 size 的条件进而导致存在残留数据无法处理
   bool write(LineRecord *line) {
     lineQueue->enqueue(line);
+    return true;
   }
 
   void switchLoadFile();
@@ -100,7 +103,7 @@ public:
   }
 
   void doWrite(LineRecord *record) {
-    LoadFileWriter *writer = workers[record->table];
+    LoadFileWriter *writer = workers[record->tableId];
     writer->write(record);
   }
 };

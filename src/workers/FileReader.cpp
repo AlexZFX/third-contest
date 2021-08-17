@@ -30,12 +30,12 @@ int FileReader::run() {
       }
       continue;
     }
-    if (m_chunk->getChunkNo() < g_minChunkId) {
+    if (m_chunk->getChunkNo() <= g_minChunkId) {
       delete m_chunk;
       continue;
     }
     readChunk(m_chunk);
-    while (!m_dstChunkQueuePtr->insert(m_chunk)) {
+    while (!m_dstChunkSet->insert(m_chunk)) {
       usleep(100 * 1000);
     }
     if (m_chunk->getChunkNo() == g_maxChunkId) {
@@ -126,7 +126,7 @@ int FileReader::dealLine(char *start, int seek) {
   }
   auto *line = new LineRecord();
   //设置本行 line 对应的 TableID
-  line->table = tableId;
+  line->tableId = tableId;
   //设置本行line对应的 chunkId 信息
 //  line->chunkId = m_chunk->getChunkNo();
   memcpy(line->idxs, ids, sizeof(int) * 4);

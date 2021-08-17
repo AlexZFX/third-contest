@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   g_bitmapManager = new BitmapManager(); // 全局bitmap
-  initTableMap(g_tableMap);
+  initTableMap();
   // 其他的启动全都依赖于 manager信息ok否
   std::vector<string> readFiles;
   getFileNames(g_conf.inputDir, readFiles, SOURCE_FILE_NAME_TEMPLATE);
@@ -145,6 +145,6 @@ int main(int argc, char *argv[]) {
 
 
   loadDataMgn.join();
-
+  LogError("run finish will exit , cost: %lld, ", getCurrentLocalTimeStamp() - startTime);
   return 0;
 }

@@ -16,7 +16,7 @@ private:
 
   ThreadSafeQueue<FileChunk *> *m_chunkQueuePtr;
 
-  ChunkSet *m_dstChunkQueuePtr;
+  ChunkSet *m_dstChunkSet;
 
   int dealLine(char *start, int seek);
 
@@ -24,8 +24,8 @@ private:
 
 public:
 
-  explicit FileReader(ThreadSafeQueue<FileChunk *> *chunkQueuePtr, ChunkSet *dstChunkQueuePtr)
-    : m_chunkQueuePtr(chunkQueuePtr), m_dstChunkQueuePtr(dstChunkQueuePtr) {};
+  explicit FileReader(ThreadSafeQueue<FileChunk *> *chunkQueuePtr, ChunkSet *dstChunkSet)
+    : m_chunkQueuePtr(chunkQueuePtr), m_dstChunkSet(dstChunkSet) {};
 
   ~FileReader() = default;
 

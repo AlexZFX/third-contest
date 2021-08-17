@@ -205,7 +205,7 @@ bool CNewMysql::connect() {
   }
   //解决蜜罐漏洞，防止连到伪客户端
   if (!m_allowLocalInf) {
-    int localInfileFlag = 0;
+    int localInfileFlag = 1;
     if (0 != mysql_options(m_mysql, MYSQL_OPT_LOCAL_INFILE, (const char *) &localInfileFlag)) {
       setError("set option MYSQL_OPT_LOCAL_INFILE failed");
       return false;
@@ -221,8 +221,6 @@ bool CNewMysql::connect() {
     mysql_options(m_mysql, MYSQL_SET_CHARSET_NAME, m_charset.c_str());
     //  printf("mysql_options MYSQL_SET_CHARSET_NAME %s\n",m_charset.c_str());
   }
-  int localInfile = 1;
-  mysql_options(m_mysql, MYSQL_OPT_LOCAL_INFILE, &localInfile);
   if (!realConnect()) {
     close();
     return false;

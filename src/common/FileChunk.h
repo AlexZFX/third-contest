@@ -9,13 +9,14 @@
 #include <sys/mman.h>
 
 #include "metadata.h"
-#include <stack>
 #include "common/Common.h"
+#include <vector>
+
 
 class LineRecord {
 public:
   OPERATION operation{};
-  TABLE_ID table;
+  TABLE_ID tableId;
   int idxs[4];
   int datetimeStartPos;
   char *memFile;
@@ -47,7 +48,7 @@ private:
 
 public:
 
-  std::stack<LineRecord *> m_lines; // 需要被处理的行，按顺序插入，这样可以逆序处理
+  std::vector<LineRecord *> m_lines; // 需要被处理的行，按顺序插入，这样可以逆序处理
 
   FileChunk(int chunkNo, char *_mem_file, long startPos, long endPos, long fileSize, bool isLast) {
     _memFile = _mem_file;
@@ -71,9 +72,9 @@ public:
   }
 
   void release() {
-    if (_isLast) {
-      munmap(_memFile, _fileSize);
-    }
+//    if (_isLast) {
+//      munmap(_memFile, _fileSize);
+//    }
   }
 
   int getChunkNo() const {
@@ -97,7 +98,7 @@ public:
   }
 
   void addLine(LineRecord *line) {
-    m_lines.push(line);
+    m_lines.emplace_back(line);
   }
 };
 

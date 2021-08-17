@@ -21,7 +21,12 @@ bool LoadDataWorker::init() {
   int port = atoi(g_conf.outputDbUrl.substr(g_conf.outputDbUrl.find_last_of(':') + 1,
                                             g_conf.outputDbUrl.find_last_of('/') -
                                             g_conf.outputDbUrl.find_last_of(':') - 1).c_str());
-  return m_mysql->init(url, port, g_conf.outputDbUser, g_conf.outputDbPass, 3600, database, "utf8mb4");
+  if (m_mysql->init(url, port, g_conf.outputDbUser, g_conf.outputDbPass, 3600, database, "utf8mb4")) {
+    return true;
+  } else {
+    cerr << m_mysql->getErr() << endl;
+    return false;
+  }
 }
 
 
@@ -37,9 +42,11 @@ int LoadDataWorker::run() {
       LogInfo("get empty file name, will continue and retry");
       continue;
     }
-    char buf[1024] = {0};
-    string tableName = fileName.substr(fileName.find_last_of(SLASH_SEPARATOR) + 1, fileName.find_first_of('_'));
+    string tableName = fileName.substr(fileName.find_last_of(SLASH_SEPARATOR) + 1,
+                                       fileName.find_last_of('_') - fileName.find_last_of(SLASH_SEPARATOR) - 1);
     auto tableId = static_cast<TABLE_ID>(stoi(tableName));
+
+    char buf[1024] = {0};
     switch (tableId) {
       case TABLE_ID::TABLE_WAREHOUSE_ID: {
         sprintf(buf, WAREHOUSE_LOAD_SQL.c_str(), fileName.c_str());

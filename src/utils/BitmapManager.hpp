@@ -20,7 +20,7 @@ class BitmapItem {
 public:
   BitmapItem(long max, std::vector<Index> indexs, int indexNum) {
     _max = max;
-    _bits = new char[max]{0};
+    _bits = new char[max + 1]{0};
     _index = std::move(indexs);
     _indexNum = indexNum;
   }
@@ -38,21 +38,17 @@ public:
     long preMax = 0;
 
     for (int i = 0; i < _indexNum; ++i) {
-      Index idx = _index[i];
       const long val = ids[i];
       preMin = preMax;
-      preMax += idx.getMax();
-
-      _lock.lock();
-
+      preMax += _index[i].getMax();
+//      _lock.lock();
       if (_bits[preMin + val] == 1) {
-        _lock.unlock();
-        return false;
+//        _lock.unlock();
+        continue;
       }
       _bits[preMin + val] = 1;
-      _lock.unlock();
-
-      preMax++;
+//      _lock.unlock();
+      return false;
     }
     return true;
   }
@@ -72,13 +68,11 @@ public:
       const long val = ids[i];
       preMin = preMax;
       preMax += idx.getMax();
-
-      if (_bits[preMin + val] == 1) {
-        return true;
+      if (_bits[preMin + val] != 1) {
+        return false;
       }
-      preMax++;
     }
-    return false;
+    return true;
   }
 
   private:

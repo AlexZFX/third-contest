@@ -86,15 +86,12 @@ inline std::vector<std::string> tokenize(const std::string &s, char delims, size
 }
 
 // hard code，写死8张表
-inline void initTableMap(unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> &tableMap) {
+inline void initTableMap() {
 
   /*
 customer:大约1500万行
 district: 5000行
 Item:10万行
-
-
-
    */
 
   // warehouse
@@ -121,7 +118,7 @@ Item:10万行
     warehouse->addColumn(w9);
     warehouse->pksOrd.push_back(0);
 //    tableMap["warehouse"] = warehouse;
-    tableMap[TABLE_ID::TABLE_WAREHOUSE_ID] = warehouse;
+    g_tableMap[TABLE_ID::TABLE_WAREHOUSE_ID] = warehouse;
 
     std::vector<Index> indexs = {
       /*w_id*/Index(0, 0, 500, -1)
@@ -157,8 +154,8 @@ Item:10万行
     district->addColumn(d11);
     district->pksOrd.push_back(1);
     district->pksOrd.push_back(0);
-//    tableMap["district"] = district;
-    tableMap[TABLE_ID::TABLE_DISTRICT_ID] = district;
+//    g_tableMap["district"] = district;
+    g_tableMap[TABLE_ID::TABLE_DISTRICT_ID] = district;
 
     /*
      | max(c_w_id) | max(c_d_id) | max(c_id) |
@@ -166,7 +163,7 @@ Item:10万行
      */
     std::vector<Index> indexs = {
       /*d_w_id*/Index(0, 0, 500, -1),
-      /*d_id*/Index(0, 0, 3000, -1)
+      /*d_id*/Index(0, 0, 5000, -1)
     };
 //    std::vector<Index> indexs = {
 //      /*c_w_id*/Index(0, 0, 500, -1),
@@ -224,8 +221,8 @@ Item:10万行
     customer->pksOrd.push_back(2);
     customer->pksOrd.push_back(1);
     customer->pksOrd.push_back(0);
-//    tableMap["customer"] = customer;
-    tableMap[TABLE_ID::TABLE_CUSTOMER_ID] = customer;
+//    g_tableMap["customer"] = customer;
+    g_tableMap[TABLE_ID::TABLE_CUSTOMER_ID] = customer;
 
     /*
         | max(c_w_id) | max(c_d_id) | max(c_id)
@@ -235,7 +232,7 @@ Item:10万行
     std::vector<Index> indexs = {
       /*c_w_id*/ Index(2, 0, 500, -1),
       /*c_d_id*/ Index(1, 0, 10, -1),
-      /*c_id*/ Index(0, 0, 3000, -1)
+      /*c_id*/ Index(0, 0, 5000, -1)
     };
     g_bitmapManager->registerBitmap(TABLE_ID::TABLE_CUSTOMER_ID, indexs);
   }
@@ -252,13 +249,13 @@ Item:10万行
     new_orders->pksOrd.push_back(2);
     new_orders->pksOrd.push_back(1);
     new_orders->pksOrd.push_back(0);
-//    tableMap["new_orders"] = new_orders;
-    tableMap[TABLE_ID::TABLE_NEW_ORDERS_ID] = new_orders;
+//    g_tableMap["new_orders"] = new_orders;
+    g_tableMap[TABLE_ID::TABLE_NEW_ORDERS_ID] = new_orders;
 
     std::vector<Index> indexs = {
       /*no_w_id*/Index(2, 0, 500, -1),
       /*no_d_id*/Index(1, 0, 10, -1),
-      /*no_o_id*/Index(0, 0, 3000, -1)
+      /*no_o_id*/Index(0, 0, 5000, -1)
     };
     g_bitmapManager->registerBitmap(TABLE_ID::TABLE_NEW_ORDERS_ID, indexs);
   }
@@ -285,13 +282,13 @@ Item:10万行
     orders->pksOrd.push_back(2);
     orders->pksOrd.push_back(1);
     orders->pksOrd.push_back(0);
-//    tableMap["orders"] = orders;
-    tableMap[TABLE_ID::TABLE_ORDERS_ID] = orders;
+//    g_tableMap["orders"] = orders;
+    g_tableMap[TABLE_ID::TABLE_ORDERS_ID] = orders;
 
     std::vector<Index> indexs = {
       /*no_w_id*/Index(2, 0, 500, -1),
       /*no_d_id*/Index(1, 0, 10, -1),
-      /*o_id*/Index(0, 0, 3000, -1)
+      /*o_id*/Index(0, 0, 5000, -1)
     };
     g_bitmapManager->registerBitmap(TABLE_ID::TABLE_ORDERS_ID, indexs);
   }
@@ -323,8 +320,8 @@ Item:10万行
     order_line->pksOrd.push_back(1);
     order_line->pksOrd.push_back(0);
     order_line->pksOrd.push_back(3);
-//    tableMap["order_line"] = order_line;
-    tableMap[TABLE_ID::TABLE_ORDERS_LINE_ID] = order_line;
+//    g_tableMap["order_line"] = order_line;
+    g_tableMap[TABLE_ID::TABLE_ORDERS_LINE_ID] = order_line;
 
     /*
         | max(ol_w_id) | max(ol_d_id) | max(ol_o_id) | max(ol_number) |
@@ -334,7 +331,7 @@ Item:10万行
     std::vector<Index> indexs = {
       /*ol_w_id*/Index(2, 0, 500, -1),
       /*ol_d_id*/Index(1, 0, 10, -1),
-      /*ol_o_id*/Index(0, 3000, 10, -1),
+      /*ol_o_id*/Index(0, 0, 5000, -1),
       /*ol_number*/Index(3, 0, 15, -1)
     };
     g_bitmapManager->registerBitmap(TABLE_ID::TABLE_ORDERS_LINE_ID, indexs);
@@ -355,8 +352,8 @@ Item:10万行
     item->addColumn(w5);
 
     item->pksOrd.push_back(0);
-//    tableMap["item"] = item;
-    tableMap[TABLE_ID::TABLE_ITEM_ID] = item;
+//    g_tableMap["item"] = item;
+    g_tableMap[TABLE_ID::TABLE_ITEM_ID] = item;
 
     /*
      | max(i_id) |
@@ -406,7 +403,7 @@ Item:10万行
     stock->addColumn(w17);
     stock->pksOrd.push_back(1);
     stock->pksOrd.push_back(0);
-    tableMap[TABLE_ID::TABLE_STOCK_ID] = stock;
+    g_tableMap[TABLE_ID::TABLE_STOCK_ID] = stock;
 
     std::vector<Index> indexs = {
       /*s_w_id*/Index(1, 0, 500, -1),
