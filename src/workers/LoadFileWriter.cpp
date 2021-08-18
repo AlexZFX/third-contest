@@ -19,6 +19,8 @@ int LoadFileWriter::run() {
     } else if (line == nullptr) {
       LogInfo("get empty line, tableName: %s", tableName.c_str());
       if (g_conf.dispatchLineFinish && lineQueue->empty()) {
+        munmap(fileStartPtr, maxFileSize);
+        remove(curFileName.c_str());
         g_conf.loadFileWriteFinish = true;
         return 0;
       }

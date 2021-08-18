@@ -222,8 +222,6 @@ public:
 
   bool setCharset(const string &charset);
 
-  int getBranchVersion();
-
   ~CNewMysql();
 
 //如果是select语句，返回0成功，否则失败

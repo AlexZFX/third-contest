@@ -47,12 +47,12 @@ public:
    * 返回接下来n个连续的 fileChunk
    * @return count 为返回的 fileChunk 数量
    */
-  int getAndEraseNext(FileChunk **jsonInfos) {
+  int getAndEraseNext(FileChunk **chunks) {
     std::lock_guard<std::mutex> guard(m_mutex);
     int count = 0, size = m_chunkSet.size();
-    // 只要是连续的就都加进去，总量需要小于等于jsonInfos的容量，当前配置 jsonInfos 的容量等于 SET_DEFAULT_CAPACITY
+    // 只要是连续的就都加进去，总量需要小于等于chunks的容量，当前配置 chunks 的容量等于 SET_DEFAULT_CAPACITY
     while (count < size && (*m_chunkSet.begin())->getChunkNo() == (m_sequenceNum + 1) && count < SET_DEFAULT_CAPACITY) {
-      jsonInfos[count] = *m_chunkSet.begin();
+      chunks[count] = *m_chunkSet.begin();
       ++m_sequenceNum;
       ++count;
       m_chunkSet.erase(m_chunkSet.begin());

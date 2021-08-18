@@ -121,9 +121,10 @@ int FileReader::dealLine(char *start, int seek) {
   ++pos; // \n
   // 读完了这一行，看看是否需要放到chunk的栈里面
   // 提前检验一次 pk 是否已经被处理过
-  if (g_bitmapManager->checkExistsNoLock(tableId, ids)) { // 存在的话直接返回不需要处理了
-    return pos - start;
-  }
+//  g_conf.dealCounts[tableId] += 1;
+//  if (g_bitmapManager->checkExistsNoLock(tableId, ids)) { // 存在的话直接返回不需要处理了
+//    return pos - start;
+//  }
   auto *line = new LineRecord();
   //设置本行 line 对应的 TableID
   line->tableId = tableId;
@@ -134,6 +135,7 @@ int FileReader::dealLine(char *start, int seek) {
   line->memFile = columnStart;
   // 设置这一行的数据有多长
   line->size = pos - columnStart;
+  line->operation = op;
   // 设置时间字段的长度信息
   line->datetimeStartPos = timeSeek;
   //本 chunk 的 line 解析信息记录

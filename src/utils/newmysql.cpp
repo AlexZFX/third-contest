@@ -2,7 +2,6 @@
 #include <mysqld_error.h>
 #include <cstdio>
 #include <algorithm>
-#include "strings.hpp"
 
 //获取系统启动以来的时间，单位为毫秒
 inline uint64_t getMonotonic_msec() {
@@ -38,38 +37,6 @@ int runSqlStatement(CNewMysql &conn, const std::string &sql, uint64_t *cost = NU
 
     return ret;
   }
-}
-
-int CNewMysql::getBranchVersion() {
-  if (-1 == m_branch_version) {
-    CSelectResult mysql_version;
-    char err[1024];
-    if (0 == query("select version()", mysql_version) && 0 != mysql_version.num_rows()) {
-      int mainVersion = 0;
-      int subVersion = 0;
-      if (2 != sscanf(mysql_version[0]["version()"], "%d.%d.%*s", &mainVersion, &subVersion)) {
-        snprintf(err, sizeof(err), "get mysql version failed,version string:%s", mysql_version[0]["version()"]);
-        setError(err);
-      } else {
-        //mariadb支持10.0.x、10.1.x、10.4.x；percona支持5.7.x、5.6.x
-        if (10 == mainVersion && (0 == subVersion || 1 == subVersion || 4 == subVersion)) {
-          m_branch_version = MYSQL_MARIADB;
-        } else if (5 == mainVersion) {
-          if (6 == subVersion) {
-            m_branch_version = MYSQL_PERCONA_5_6;
-          } else if (7 == subVersion) {
-            m_branch_version = MYSQL_PERCONA;
-          } else
-            m_branch_version = MYSQL_UNKNOWN;
-        } else if (8 == mainVersion && 0 == subVersion) {
-          m_branch_version = MYSQL_8_0;
-        } else {
-          m_branch_version = MYSQL_UNKNOWN;
-        }
-      }
-    }
-  }
-  return m_branch_version;
 }
 
 bool CNewMysql::init(const string &host,

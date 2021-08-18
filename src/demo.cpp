@@ -113,6 +113,10 @@ int main(int argc, char *argv[]) {
   }
   g_bitmapManager = new BitmapManager(); // 全局bitmap
   initTableMap();
+  for (const auto &item : g_tableMap) {
+    g_conf.dealCounts[item.first] = 0;
+    g_conf.afterCounts[item.first] = 0;
+  }
   // 其他的启动全都依赖于 manager信息ok否
   std::vector<string> readFiles;
   getFileNames(g_conf.inputDir, readFiles, SOURCE_FILE_NAME_TEMPLATE);

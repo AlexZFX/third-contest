@@ -26,11 +26,13 @@ int LineFilter::run() {
       for (int j = chunk->m_lines.size() - 1; j >= 0; --j) {
         auto line = chunk->m_lines[j];
         auto tableId = line->tableId;
+        g_conf.beforeFilterCounts[tableId] += 1;
         // 实际上Bitmap只在这里出现过写操作，而 LineFilter 又是一个单线程的处理操作，因此这里可以直接调用BitmapManager的doSnapshot操作
         if (!g_bitmapManager->putIfAbsent(tableId, line->idxs) || line->operation == OPERATION::DELETE_OPERATION) {
           delete line; // 这个东西得及时处理掉
           continue;
         }
+        g_conf.afterCounts[tableId] += 1;
         // 把 line 给到 loadFileWriter
         // push to dst queue
         g_loadFileWriterMgn->doWrite(line);

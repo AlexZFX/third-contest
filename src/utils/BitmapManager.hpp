@@ -6,11 +6,12 @@
 #include <string>
 #include <mutex>
 #include <shared_mutex>
-#include <stack>
+#include <lib/parallel_hashmap/phmap.h>
 
 
 #include "common/Common.h"
 #include "entity/Index.h"
+#include "parallel_hashmap/phmap.h"
 
 using namespace std;
 
@@ -20,7 +21,8 @@ class BitmapItem {
 public:
   BitmapItem(long max, std::vector<Index> indexs, int indexNum) {
     _max = max;
-    _bits = new char[max + 1]{0};
+    _bits = new char[max + 1];
+    memset(_bits, 0, max + 1);
     _index = std::move(indexs);
     _indexNum = indexNum;
   }
@@ -30,27 +32,26 @@ public:
   }
 
   /**
-   * 这个东西是单线程调用的，不加锁也一样
-   * @param uniq
+   *
+   * @param ids
+   * @return true 如果不存在，false 如果已存在
    */
   bool putIfAbsent(const int *ids) {
     long preMin = 0;
     long preMax = 0;
-
+    bool op = false;
     for (int i = 0; i < _indexNum; ++i) {
       const long val = ids[i];
       preMin = preMax;
       preMax += _index[i].getMax();
-//      _lock.lock();
+      // 等于 1 就继续往后查找并且设置
       if (_bits[preMin + val] == 1) {
-//        _lock.unlock();
         continue;
       }
       _bits[preMin + val] = 1;
-//      _lock.unlock();
-      return false;
+      op = true; // 做了更新操作，说明不存在
     }
-    return true;
+    return op;
   }
 
   /**
@@ -62,20 +63,17 @@ public:
   bool checkExistsNoLock(const int *ids) {
     long preMin = 0;
     long preMax = 0;
-
     for (int i = 0; i < _indexNum; ++i) {
-      Index idx = _index[i];
-      const long val = ids[i];
       preMin = preMax;
-      preMax += idx.getMax();
-      if (_bits[preMin + val] != 1) {
+      preMax += _index[i].getMax();
+      if (_bits[preMin + ids[i]] != 1) {
         return false;
       }
     }
     return true;
   }
 
-  private:
+private:
   char *_bits;
 
   int _indexNum;
@@ -86,13 +84,15 @@ public:
 
   std::mutex _lock;
 
-  public:
+public:
   char *getBits() const {
     return _bits;
   }
+
   void setBits(char *bits) {
     _bits = bits;
   }
+
   int getIndexNum() const {
     return _indexNum;
   }
@@ -176,7 +176,7 @@ public:
     }
 
     // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
-    char *serialBitArr = new char [maxCharArr + 8 * 4];
+    char *serialBitArr = new char[maxCharArr + 8 * 4];
     long pos = 0;
 
     for (auto &item : _itemMap) {
@@ -198,15 +198,15 @@ public:
   /**
    *
    */
-  void loadSnapshot(char * data) {
+  void loadSnapshot(char *data) {
     long total = sizeof(*data);
     long prePos = 0;
 
     lock.lock();
 
-    for (long i = 0; i < total; i ++) {
+    for (long i = 0; i < total; i++) {
       if (data[i] == '#') {
-        char *tmp = new char [i - prePos];
+        char *tmp = new char[i - prePos];
         memcpy(tmp, data + prePos, i - prePos);
         auto id = static_cast<TABLE_ID>(tmp[0]);
 

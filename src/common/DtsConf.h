@@ -7,6 +7,8 @@
 
 #include <string>
 #include <unordered_map>
+#include <atomic>
+#include "common/Common.h"
 
 using namespace std;
 
@@ -22,6 +24,10 @@ public:
   bool loadFinish;
   bool dispatchLineFinish;
   bool loadFileWriteFinish;
+
+  unordered_map<TABLE_ID, atomic_int64_t, TABLE_ID_HASH> dealCounts;
+  unordered_map<TABLE_ID, atomic_int64_t, TABLE_ID_HASH> beforeFilterCounts;
+  unordered_map<TABLE_ID, atomic_int64_t, TABLE_ID_HASH> afterCounts;
 
   DtsConf() : readerFinish(false), loadFinish(false), dispatchLineFinish(false), loadFileWriteFinish(false) {
 
