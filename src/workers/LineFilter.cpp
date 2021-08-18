@@ -15,7 +15,7 @@ extern DtsConf g_conf;
 
 int LineFilter::run() {
   while (m_threadstate) {
-    FileChunk *chunks[10];
+    FileChunk *chunks[SET_DEFAULT_CAPACITY];
     int count = m_chunkQueue->getAndEraseNext(chunks);
     if (count == 0) {
       usleep(100 * 1000);
