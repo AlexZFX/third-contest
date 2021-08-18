@@ -92,6 +92,13 @@ int LoadDataWorker::run() {
     }
     LogError("load file: %s cost time %lld ms", fileName.c_str(), getCurrentLocalTimeStamp() - start);
     // TODO metadata
+
+    //    curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
+    //                to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
+    string fileIndex = fileName.substr(fileName.find_last_of('_') + 1,
+                                       fileName.size() - fileName.find_last_of('_') - 1);
+
+    metadataManager->setFinishLoadfile(tableId, atoi(fileIndex.c_str()));
   }
   return 0;
 }

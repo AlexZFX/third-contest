@@ -5,19 +5,20 @@
 #ifndef THIRD_CONTEST_LOADFILEWRITER_H
 #define THIRD_CONTEST_LOADFILEWRITER_H
 
-#include <utility>
-#include <unistd.h>
-#include <sys/mman.h>
 #include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <utility>
 
+#include "../common/Common.h"
+#include "../common/FileChunk.h"
 #include "../lib/boost/lockfree/spsc_queue.hpp"
 #include "../utils/BaseThread.h"
-#include "../common/FileChunk.h"
-#include "../utils/Util.h"
-#include "../common/Common.h"
 #include "../utils/ThreadSafeQueue.h"
-#include "common/DtsConf.h"
+#include "../utils/Util.h"
+#include "MetadataManager.h"
 #include "boost/lockfree/spsc_queue.hpp"
+#include "common/DtsConf.h"
 
 using namespace std;
 
@@ -29,7 +30,7 @@ extern DtsConf g_conf;
  * 初步先实现成文件线性处理，后续可以优化成多线程并发
  */
 class LoadFileWriter : public BaseThread {
-private:
+  private:
   int currentChunkId;
   string curFileName;
   string tableName;
@@ -42,19 +43,18 @@ private:
   long lastTime;
 
   ThreadSafeQueue<LineRecord *> lineQueue;
-//  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
+  //  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
   ThreadSafeQueue<std::string> *dstFileQueue;
 
-public:
-
+  public:
   LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr)
-    : tableName(std::move(table)), fileIndex(0),
-      maxFileSize(LoadFileSize), size(0),
-      dstFileQueue(queuePtr){
+      : tableName(std::move(table)), fileIndex(0),
+        maxFileSize(LoadFileSize), size(0),
+        dstFileQueue(queuePtr) {
     tableId = getTableIdByName(tableName);
     curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
                   to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
-    int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666); // 先不 close
+    int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);// 先不 close
     lseek(fd, maxFileSize, SEEK_END);
     ::write(fd, "", 1);
     fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
@@ -75,16 +75,32 @@ public:
     return true;
   }
 
-  void switchLoadFile();
+  int getCurrentChunkId() const;
+  const string &getCurFileName() const;
+  const string &getTableName() const;
+  TABLE_ID getTableId() const;
+  int getFileIndex() const;
+  int32_t getMaxFileSize() const;
+  int32_t getSize() const;
+  char *getFileStartPtr() const;
+  char *getCurFilePtr() const;
+  const ThreadSafeQueue<LineRecord *> &getLineQueue() const;
+  ThreadSafeQueue<std::string> *getDstFileQueue() const;
+  MetadataManager *getMetadataMgn() const;
 
+  void switchLoadFile();
 };
 
 class LoadFileWriterMgn : public BaseThread {
-private:
+  private:
+  int preSnapshotChunkID;
   std::mutex _mutex;
   unordered_map<TABLE_ID, LoadFileWriter *, TABLE_ID_HASH> workers;
-public:
-  LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
+  MetadataManager *_metadataMgn;
+
+  public:
+  LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr, MetadataManager *metadataMgn) {
+    _metadataMgn = metadataMgn;
     for (const auto &item : g_tableMap) {
       workers[item.first] = new LoadFileWriter(item.second->getTableName(), queuePtr);
     }
@@ -110,6 +126,11 @@ public:
     std::lock_guard<std::mutex> guard(_mutex);
     workers[record->tableId]->write(record);
   }
+
+  void doSnapshot();
+
+  int getPreSnapshotChunkId() const;
+  MetadataManager *getMetadataMgn() const;
 };
 
-#endif //THIRD_CONTEST_LOADFILEWRITER_H
+#endif//THIRD_CONTEST_LOADFILEWRITER_H

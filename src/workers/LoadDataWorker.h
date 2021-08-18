@@ -8,6 +8,7 @@
 #include "../utils/BaseThread.h"
 #include "utils/ThreadSafeQueue.h"
 #include "../utils/newmysql.h"
+#include "MetadataManager.h"
 
 class LoadDataWorker : public BaseThread {
 
@@ -17,8 +18,10 @@ private:
 
   CNewMysql *m_mysql;
 
+  MetadataManager *metadataManager;
+
 public:
-  explicit LoadDataWorker(ThreadSafeQueue<std::string> *queuePtr) : m_queuePtr(queuePtr), m_mysql(nullptr) {};
+  explicit LoadDataWorker(ThreadSafeQueue<std::string> *queuePtr, MetadataManager *metadataManager) : m_queuePtr(queuePtr), metadataManager(metadataManager), m_mysql(nullptr) {};
 
   bool init();
 
@@ -34,9 +37,9 @@ private:
   int m_threadNum;
   LoadDataWorker *workers[100]{};
 public:
-  LoadDataWorkerMgn(int threadNum, ThreadSafeQueue<string> *queuePtr) : m_threadNum(threadNum) {
+  LoadDataWorkerMgn(int threadNum, ThreadSafeQueue<string> *queuePtr, MetadataManager *metadataManager) : m_threadNum(threadNum) {
     for (int i = 0; i < m_threadNum; ++i) {
-      workers[i] = new LoadDataWorker(queuePtr);
+      workers[i] = new LoadDataWorker(queuePtr, metadataManager);
       workers[i]->init();
     }
   }

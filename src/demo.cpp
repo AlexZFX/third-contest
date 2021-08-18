@@ -128,13 +128,14 @@ int main(int argc, char *argv[]) {
   auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
   auto chunkSet = new ChunkSet(manager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
   auto loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
+  auto loadDataFinishQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
   // 后续 splitter 是可以优化掉的，只在第一次启动的时候run，后续重启不需要再run一遍，只要记录下来就行
   FileSplitter splitter(readFiles, chunkQueue);
   splitter.start();
   //
   manager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn(16, loadDataFileNameQueue);
+  LoadDataWorkerMgn loadDataMgn(16, loadDataFileNameQueue, loadDataFinishQueue);
   loadDataMgn.start();
   // 读文件读线程
   FileReaderMgn fileReaderMgn(16, chunkQueue, chunkSet);
@@ -143,7 +144,7 @@ int main(int argc, char *argv[]) {
   LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record
   lineFilter.start();
 
-  g_loadFileWriterMgn = new LoadFileWriterMgn(loadDataFileNameQueue);
+  g_loadFileWriterMgn = new LoadFileWriterMgn(loadDataFileNameQueue, &manager);
   g_loadFileWriterMgn->start();
 
 

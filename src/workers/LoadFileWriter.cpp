@@ -67,5 +67,52 @@ void LoadFileWriter::switchLoadFile() {
   curFilePtr = fileStartPtr;
   close(fd);
   // PERSISTz
+
+
   size = 0;
+}
+int LoadFileWriter::getCurrentChunkId() const {
+  return currentChunkId;
+}
+const string &LoadFileWriter::getCurFileName() const {
+  return curFileName;
+}
+const string &LoadFileWriter::getTableName() const {
+  return tableName;
+}
+TABLE_ID LoadFileWriter::getTableId() const {
+  return tableId;
+}
+int LoadFileWriter::getFileIndex() const {
+  return fileIndex;
+}
+int32_t LoadFileWriter::getMaxFileSize() const {
+  return maxFileSize;
+}
+int32_t LoadFileWriter::getSize() const {
+  return size;
+}
+char *LoadFileWriter::getFileStartPtr() const {
+  return fileStartPtr;
+}
+char *LoadFileWriter::getCurFilePtr() const {
+  return curFilePtr;
+}
+const ThreadSafeQueue<LineRecord *> &LoadFileWriter::getLineQueue() const {
+  return lineQueue;
+}
+ThreadSafeQueue<std::string> *LoadFileWriter::getDstFileQueue() const {
+  return dstFileQueue;
+}
+
+void LoadFileWriterMgn::doSnapshot() {
+  int minChunkID = INT32_MAX;
+  for (auto &worker : workers) {
+    int id = worker.second->getCurrentChunkId();
+    minChunkID = min(minChunkID, id);
+  }
+  _metadataMgn->successChunkIndex = minChunkID;
+}
+MetadataManager *LoadFileWriterMgn::getMetadataMgn() const {
+  return _metadataMgn;
 }
