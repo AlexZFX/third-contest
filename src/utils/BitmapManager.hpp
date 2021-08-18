@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 #include <mutex>
-#include <shared_mutex>
+#include "boost/thread/mutex.hpp"
 #include <lib/parallel_hashmap/phmap.h>
 
 
@@ -20,15 +20,14 @@ class BitmapItem {
 
 public:
   BitmapItem(long max, std::vector<Index> indexs, int indexNum) {
-    _max = max;
-    _bits = new char[max + 1];
-    memset(_bits, 0, max + 1);
-    _index = std::move(indexs);
-    _indexNum = indexNum;
+//    _max = max;
+//    _bits = new char[max + 1];
+//    memset(_bits, 0, max + 1);
+//    _index = std::move(indexs);
+//    _indexNum = indexNum;
   }
 
   ~BitmapItem() {
-    delete[]_bits;
   }
 
   /**
@@ -36,22 +35,12 @@ public:
    * @param ids
    * @return true 如果不存在，false 如果已存在
    */
-  bool putIfAbsent(const int *ids) {
-    long preMin = 0;
-    long preMax = 0;
-    bool op = false;
-    for (int i = 0; i < _indexNum; ++i) {
-      const long val = ids[i];
-      preMin = preMax;
-      preMax += _index[i].getMax();
-      // 等于 1 就继续往后查找并且设置
-      if (_bits[preMin + val] == 1) {
-        continue;
-      }
-      _bits[preMin + val] = 1;
-      op = true; // 做了更新操作，说明不存在
+  bool putIfAbsent(const std::string &key) {
+    if (m_indexSet.contains(key)) {
+      return false;
     }
-    return op;
+    m_indexSet.insert(key);
+    return true;
   }
 
   /**
@@ -60,50 +49,17 @@ public:
    * @param ids
    * @return if exist return true, otherwise return false
    */
-  bool checkExistsNoLock(const int *ids) {
-    long preMin = 0;
-    long preMax = 0;
-    for (int i = 0; i < _indexNum; ++i) {
-      preMin = preMax;
-      preMax += _index[i].getMax();
-      if (_bits[preMin + ids[i]] != 1) {
-        return false;
-      }
-    }
-    return true;
+  bool checkExistsNoLock(const std::string &key) {
+    return m_indexSet.contains(key);
   }
 
 private:
-  char *_bits;
 
-  int _indexNum;
-
-  long _max;
-
-  std::vector<Index> _index;
-
-  std::mutex _lock;
+  phmap::parallel_flat_hash_set<std::string, phmap::priv::hash_default_hash<string>,
+    phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 4, boost::mutex> m_indexSet;
 
 public:
-  char *getBits() const {
-    return _bits;
-  }
 
-  void setBits(char *bits) {
-    _bits = bits;
-  }
-
-  int getIndexNum() const {
-    return _indexNum;
-  }
-
-  const std::vector<Index> &getIndex() const {
-    return _index;
-  }
-
-  long getMax() const {
-    return _max;
-  }
 };
 
 
@@ -120,7 +76,7 @@ private:
   unordered_map<TABLE_ID, BitmapItem *, TABLE_ID_HASH> _itemMap;
 
   // bitMapManager 的 snapshot
-  stack<char *> _lastSnapshot;
+//  stack<char *> _lastSnapshot;
 
 public:
   BitmapManager() = default;
@@ -151,9 +107,9 @@ public:
    * @param uniq
    * @return
    */
-  bool putIfAbsent(TABLE_ID tableId, int *uniq) {
+  bool putIfAbsent(TABLE_ID tableId, const string &key) {
     BitmapItem *item = _itemMap[tableId];
-    return item->putIfAbsent(uniq);
+    return item->putIfAbsent(key);
   }
 
   /**
@@ -161,61 +117,61 @@ public:
    * @param tableIds
    * @return
    */
-  bool checkExistsNoLock(TABLE_ID tableId, int *idx) {
-    return _itemMap[tableId]->checkExistsNoLock(idx);
+  bool checkExistsNoLock(TABLE_ID tableId, const string &key) {
+    return _itemMap[tableId]->checkExistsNoLock(key);
   }
 
   /**
    *
    */
   void doSnapshot() {
-    lock.lock();
-    long maxCharArr = 0;
-    for (auto &item : _itemMap) {
-      maxCharArr += item.second->getMax();
-    }
-
-    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
-    char *serialBitArr = new char[maxCharArr + 8 * 4];
-    long pos = 0;
-
-    for (auto &item : _itemMap) {
-      char *copyInfo = new char[item.second->getMax() + 3];
-      memcpy(copyInfo + 2, item.second->getBits(), item.second->getMax());
-      copyInfo[0] = (char) item.first;
-      copyInfo[1] = '@';
-      copyInfo[item.second->getMax() + 2] = '#';
-      memcpy(serialBitArr + pos, copyInfo, item.second->getMax() + 3);
-      pos += (item.second->getMax() + 3);
-    }
+//    lock.lock();
+//    long maxCharArr = 0;
+//    for (auto &item : _itemMap) {
+//      maxCharArr += item.second->getMax();
+//    }
+//
+//    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
+//    char *serialBitArr = new char[maxCharArr + 8 * 4];
+//    long pos = 0;
+//
+//    for (auto &item : _itemMap) {
+//      char *copyInfo = new char[item.second->getMax() + 3];
+//      memcpy(copyInfo + 2, item.second->getBits(), item.second->getMax());
+//      copyInfo[0] = (char) item.first;
+//      copyInfo[1] = '@';
+//      copyInfo[item.second->getMax() + 2] = '#';
+//      memcpy(serialBitArr + pos, copyInfo, item.second->getMax() + 3);
+//      pos += (item.second->getMax() + 3);
+//    }
 
     // 将最新的 snapshot 压到栈中
-    _lastSnapshot.push(serialBitArr);
-
-    lock.unlock();
+//    _lastSnapshot.push(serialBitArr);
+//
+//    lock.unlock();
   }
 
   /**
    *
    */
   void loadSnapshot(char *data) {
-    long total = sizeof(*data);
-    long prePos = 0;
-
-    lock.lock();
-
-    for (long i = 0; i < total; i++) {
-      if (data[i] == '#') {
-        char *tmp = new char[i - prePos];
-        memcpy(tmp, data + prePos, i - prePos);
-        auto id = static_cast<TABLE_ID>(tmp[0]);
-
-        // 加载新的 bitmap 的snapshot 到本地
-        _itemMap[id]->setBits(tmp + 2);
-      }
-    }
-
-    lock.unlock();
+//    long total = sizeof(*data);
+//    long prePos = 0;
+//
+//    lock.lock();
+//
+//    for (long i = 0; i < total; i++) {
+//      if (data[i] == '#') {
+//        char *tmp = new char[i - prePos];
+//        memcpy(tmp, data + prePos, i - prePos);
+//        auto id = static_cast<TABLE_ID>(tmp[0]);
+//
+//        // 加载新的 bitmap 的snapshot 到本地
+//        _itemMap[id]->setBits(tmp + 2);
+//      }
+//    }
+//
+//    lock.unlock();
   }
 };
 

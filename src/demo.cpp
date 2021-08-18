@@ -52,11 +52,11 @@ void initArg(int argc, char *argv[]) {
   while (-1 != (opt = getopt_long(argc, argv, "", long_options, &opt_index))) {
     switch (opt) {
       case 'i' : {
-        g_conf.inputDir = optarg;
+        g_conf.inputDir = optarg + SLASH_SEPARATOR + SOURCE_FILE_DIR;
         break;
       }
       case 'o' : {
-        g_conf.outputDir = optarg;
+        g_conf.outputDir = optarg + SLASH_SEPARATOR + SINK_FILE_DIR;
         break;
       }
       case 'r': {
@@ -135,10 +135,10 @@ int main(int argc, char *argv[]) {
   //
   manager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn(1, loadDataFileNameQueue);
+  LoadDataWorkerMgn loadDataMgn(8, loadDataFileNameQueue);
   loadDataMgn.start();
   // 读文件读线程
-  FileReaderMgn fileReaderMgn(1, chunkQueue, chunkSet);
+  FileReaderMgn fileReaderMgn(8, chunkQueue, chunkSet);
   fileReaderMgn.start();
 
   LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record

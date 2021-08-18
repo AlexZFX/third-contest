@@ -17,7 +17,8 @@ class LineRecord {
 public:
   OPERATION operation{};
   TABLE_ID tableId;
-  int idxs[4];
+//  int idxs[4];
+  string idxs;
   int datetimeStartPos;
   char *memFile;
   int size;

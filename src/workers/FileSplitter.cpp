@@ -101,6 +101,6 @@ int FileSplitter::run() {
   // 记录下最大的chunkNo
   g_maxChunkId = chunkNo - 1;
   int64_t endTime = getCurrentLocalTimeStamp();
-  LogDebug("split all file cost time %lld,", endTime - startTime);
+  LogDebug("split all file cost time %lld, max chunk id: %d", endTime - startTime, g_maxChunkId);
   return 0;
 }

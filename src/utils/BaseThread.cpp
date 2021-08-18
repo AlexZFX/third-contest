@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 BaseThread::BaseThread() {
-  m_threadID = nullptr;
+  m_threadID = 0;
   initThread();
   m_threadstate = 0;
 }
@@ -30,7 +30,7 @@ int BaseThread::initThread() {
 }
 
 int BaseThread::start() {
-  if (m_threadID != nullptr) { //已经启动了，不需要重复
+  if (m_threadID != 0) { //已经启动了，不需要重复
     return 0;
   }
   int iRet = 0;

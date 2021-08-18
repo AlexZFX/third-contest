@@ -103,8 +103,7 @@ public:
   }
 
   void doWrite(LineRecord *record) {
-    LoadFileWriter *writer = workers[record->tableId];
-    writer->write(record);
+    workers[record->tableId]->write(record);
   }
 };
 

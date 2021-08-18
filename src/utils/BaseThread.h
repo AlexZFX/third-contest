@@ -23,9 +23,9 @@ public:
   virtual int stop();
 
   void join() {
-    if (m_threadID != nullptr) {
+    if (m_threadID != 0) {
       pthread_join(m_threadID, nullptr);
-      m_threadID = nullptr;
+      m_threadID = 0;
     }
   }
 

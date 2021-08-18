@@ -17,16 +17,18 @@ int LoadFileWriter::run() {
       size = 0;
       continue;
     } else if (line == nullptr) {
-      LogInfo("get empty line, tableName: %s", tableName.c_str());
       if (g_conf.dispatchLineFinish && lineQueue->empty()) {
         munmap(fileStartPtr, maxFileSize);
         remove(curFileName.c_str());
         g_conf.loadFileWriteFinish = true;
-        return 0;
+        break;
       }
       continue;
     }
-    if (size + line->size > maxFileSize) {
+    if (line->tableId == TABLE_ID::TABLE_ORDERS_LINE_ID) {
+      ++g_conf.orderLineCount;
+    }
+    if (size + line->size >= maxFileSize) {
       switchLoadFile();
     }
     memcpy(curFilePtr + size, line->memFile, line->size);
@@ -34,6 +36,11 @@ int LoadFileWriter::run() {
       *(curFilePtr + size + line->datetimeStartPos) = '2';
     }
     size += line->size;
+    // 每个文件的最后一行非 \n 的，需要补上
+    if (*(curFilePtr + size - 1) != '\n') {
+      *(curFilePtr + size) = '\n';
+      ++size;
+    }
     // 清理掉 line 的数据，后续都是文件了
     delete line;
   }

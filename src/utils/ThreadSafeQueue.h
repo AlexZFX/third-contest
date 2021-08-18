@@ -8,6 +8,9 @@
 #include <queue>
 #include <stack>
 #include <mutex>
+#include<condition_variable>
+
+using namespace std;
 
 template<class T, class Container=std::queue<T>>
 class ThreadSafeQueue {

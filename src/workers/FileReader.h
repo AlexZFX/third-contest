@@ -20,7 +20,7 @@ private:
 
   int dealLine(char *start, int seek);
 
-  FileChunk * m_chunk;
+  FileChunk *m_chunk;
 
 public:
 
@@ -43,13 +43,12 @@ public:
 class FileReaderMgn : public BaseThread {
 private:
   int m_threadNum;
-  FileReader *workers[100]{};
+  std::vector<FileReader *> workers;
 public:
   FileReaderMgn(int threadNum, ThreadSafeQueue<FileChunk *> *queuePtr, ChunkSet *dstQueuePtr)
-    : m_threadNum(
-    threadNum) {
+    : m_threadNum(threadNum) {
     for (int i = 0; i < m_threadNum; ++i) {
-      workers[i] = new FileReader(queuePtr, dstQueuePtr);
+      workers.emplace_back(new FileReader(queuePtr, dstQueuePtr));
     }
   }
 

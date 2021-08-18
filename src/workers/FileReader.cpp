@@ -11,6 +11,7 @@
 #include "../entity/Column.h"
 #include "FileReader.h"
 #include "../utils/BitmapManager.hpp"
+#include "../utils/logger.h"
 
 extern unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> g_tableMap;
 extern int g_minChunkId;
@@ -56,10 +57,8 @@ int FileReader::readChunk(FileChunk *chunk) {
     int columnNum = 1;
     // 是 B 行的话直接不管
     if (memFile[seek] == 'B') {
-      while (memFile[seek] != '\n') { // 注意可能越界
-        ++seek;
+      while (memFile[seek++] != '\n') { // 注意可能越界
       }
-      ++seek;
       // 可以开始处理这一行 A 和 insert 相同处理即可
       continue;
     }
@@ -77,7 +76,7 @@ int FileReader::dealLine(char *start, int seek) {
   char *tmpStart, *tmpEnd, *columnStart;
   // 把一行里面的几个 position，主键搞出来
   OPERATION op = getOpByDesc(*pos);
-  pos += 2; // 自己和 \t
+  pos += 2; // op 和 \t
   // 处理掉 schema 名
   while (*pos != '\t') {
     ++pos;
@@ -95,7 +94,8 @@ int FileReader::dealLine(char *start, int seek) {
   ++pos; // \t
   columnStart = pos; // 列的真实开始位置
   int columnIndex = 0;
-  int ids[4];
+//  int ids[4];
+  string idx;
   int timeSeek = -1;
   seek += (pos - start);
   while (*pos != '\n') {
@@ -111,8 +111,10 @@ int FileReader::dealLine(char *start, int seek) {
     } else if (seek > m_chunk->getEndPos()) {
       break;
     }
+    tmpEnd = pos;
     if (table->columns[columnIndex].isPk) {
-      ids[table->columns[columnIndex].pkOrder] = atoi(tmpStart);
+//      ids[table->columns[columnIndex].pkOrder] = atoi(tmpStart);
+      idx.append(string(tmpStart, tmpEnd - tmpStart)).append("-");
     } else if (table->columns[columnIndex].getDataType() == MYSQL_TYPE_DATETIME) {
       timeSeek = tmpStart - columnStart; // 记录一下对应的 time 所在的位置，每个表只有一个列，所以这就记录一次
     }
@@ -121,16 +123,17 @@ int FileReader::dealLine(char *start, int seek) {
   ++pos; // \n
   // 读完了这一行，看看是否需要放到chunk的栈里面
   // 提前检验一次 pk 是否已经被处理过
-//  g_conf.dealCounts[tableId] += 1;
-//  if (g_bitmapManager->checkExistsNoLock(tableId, ids)) { // 存在的话直接返回不需要处理了
-//    return pos - start;
-//  }
+  g_conf.dealCounts[tableId] += 1;
+  if (g_bitmapManager->checkExistsNoLock(tableId, idx)) { // 存在的话直接返回不需要处理了
+    return pos - start;
+  }
   auto *line = new LineRecord();
   //设置本行 line 对应的 TableID
   line->tableId = tableId;
   //设置本行line对应的 chunkId 信息
 //  line->chunkId = m_chunk->getChunkNo();
-  memcpy(line->idxs, ids, sizeof(int) * 4);
+//  memcpy(line->idxs, ids, sizeof(int) * 4);
+  line->idxs = std::move(idx);
   //设置本行 line 的起始位置地址
   line->memFile = columnStart;
   // 设置这一行的数据有多长
