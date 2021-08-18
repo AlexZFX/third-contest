@@ -24,6 +24,7 @@ int FileReader::run() {
   while (m_threadstate) {
     m_chunk = nullptr;
     m_chunkQueuePtr->dequeue(1, m_chunk);
+    long startTime = getCurrentLocalTimeStamp();
     if (m_chunk == nullptr) {
       // TODO read end return
       if (g_conf.readerFinish) {
@@ -32,7 +33,6 @@ int FileReader::run() {
       }
       continue;
     }
-    LogError("%s reader will deal chunk: %d", getTimeStr(time(nullptr)).c_str(), m_chunk->getChunkNo());
     if (m_chunk->getChunkNo() <= g_minChunkId) {
       delete m_chunk;
       continue;
@@ -41,6 +41,8 @@ int FileReader::run() {
     while (!m_dstChunkSet->insert(m_chunk)) {
       usleep(100 * 1000);
     }
+    LogError("%s reader deal chunk: %d cost: %lld", getTimeStr(time(nullptr)).c_str(), m_chunk->getChunkNo(),
+             getCurrentLocalTimeStamp() - startTime);
     if (m_chunk->getChunkNo() == g_maxChunkId) {
       g_conf.readerFinish = true;
     }
@@ -53,18 +55,19 @@ int FileReader::readChunk(FileChunk *chunk) {
   const long right = chunk->getEndPos();
   char *memFile = chunk->getMamFile();
   // 开始进行列处理
-  int seek = left;
+  long seek = left;
   while (seek <= right) {
     // 从 I D T 开始的每一列序号，第一列为 operation
-    int columnNum = 1;
     // 是 B 行的话直接不管
     if (memFile[seek] == 'B') {
-      while (memFile[seek++] != '\n') { // 注意可能越界
+      while (memFile[seek] != '\n') { // 注意可能越界
+        ++seek;
       }
+      ++seek; // \n
       // 可以开始处理这一行 A 和 insert 相同处理即可
       continue;
     }
-    int lineSize = dealLine(memFile + seek, seek);
+    long lineSize = dealLine(memFile + seek, seek);
     seek += lineSize;
   }
   return 0;
@@ -73,7 +76,7 @@ int FileReader::readChunk(FileChunk *chunk) {
 /**
  * 从这里开始处理一行，目的是做一个前置过滤，减少处理量，数据直接拿出来，不做额外处理
  */
-int FileReader::dealLine(char *start, int seek) {
+long FileReader::dealLine(char *start, long seek) {
   char *pos = start;
   char *tmpStart, *tmpEnd, *columnStart;
   // 把一行里面的几个 position，主键搞出来
@@ -96,9 +99,8 @@ int FileReader::dealLine(char *start, int seek) {
   ++pos; // \t
   columnStart = pos; // 列的真实开始位置
   int columnIndex = 0;
-//  int ids[4];
   string idx;
-  int timeSeek = -1;
+  long timeSeek = -1;
   seek += (pos - start);
   while (*pos != '\n') {
     tmpStart = pos;
@@ -111,11 +113,11 @@ int FileReader::dealLine(char *start, int seek) {
       ++pos; // \t
       ++seek;
     } else if (seek > m_chunk->getEndPos()) {
+      // 文件尾
       break;
     }
     tmpEnd = pos;
     if (table->columns[columnIndex].isPk) {
-//      ids[table->columns[columnIndex].pkOrder] = atoi(tmpStart);
       idx.append(string(tmpStart, tmpEnd - tmpStart)).append("-");
     } else if (table->columns[columnIndex].getDataType() == MYSQL_TYPE_DATETIME) {
       timeSeek = tmpStart - columnStart; // 记录一下对应的 time 所在的位置，每个表只有一个列，所以这就记录一次
@@ -134,7 +136,6 @@ int FileReader::dealLine(char *start, int seek) {
   line->tableId = tableId;
   //设置本行line对应的 chunkId 信息
 //  line->chunkId = m_chunk->getChunkNo();
-//  memcpy(line->idxs, ids, sizeof(int) * 4);
   line->idxs = std::move(idx);
   //设置本行 line 的起始位置地址
   line->memFile = columnStart;

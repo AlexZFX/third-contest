@@ -18,16 +18,14 @@ static inline std::string getTimeStr(time_t realTime, const std::string &timeFor
 #ifndef LogError
 #define LogError(fmt, args...) \
   do { \
-    fprintf(stderr, fmt, ##args);\
-    fprintf(stderr, "\n");\
+    fprintf(stderr, fmt "\n", ##args);\
   } while(0)
 #endif
 
 #ifndef LogInfo
 #define LogInfo(fmt, args...) \
   do { \
-    printf(fmt, ##args);\
-    printf("\n");\
+    printf(fmt "\n", ##args);\
     fflush(nullptr);\
   } while(0)
 #endif
@@ -35,7 +33,7 @@ static inline std::string getTimeStr(time_t realTime, const std::string &timeFor
 #ifndef LogFatal
 #define LogFatal(fmt, args...) \
   do { \
-    fprintf(stderr, fmt, ##args);\
+    fprintf(stderr, fmt "\n", ##args);\
     fflush(nullptr);\
   } while(0)
 #endif
@@ -43,8 +41,7 @@ static inline std::string getTimeStr(time_t realTime, const std::string &timeFor
 #ifndef LogDebug
 #define LogDebug(fmt, args...) \
   do { \
-    printf(fmt, ##args);\
-    printf("\n");\
+    printf(fmt "\n", ##args);\
     fflush(nullptr);\
   } while(0)
 #endif

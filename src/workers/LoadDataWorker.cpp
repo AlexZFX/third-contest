@@ -39,7 +39,6 @@ int LoadDataWorker::run() {
         LogInfo("load data worker load finished, will exit");
         return 0;
       }
-//      LogInfo("get empty file name, will continue and retry");
       continue;
     }
     string tableName = fileName.substr(fileName.find_last_of(SLASH_SEPARATOR) + 1,
@@ -86,10 +85,12 @@ int LoadDataWorker::run() {
       }
     }
     CSelectResult result;
+    long start = getCurrentLocalTimeStamp();
     while (m_mysql->query(buf, result) < 0) {
       LogError("load data failed , error: %s, sleep 1 and retry", m_mysql->getErr());
       usleep(100 * 1000);
     }
+    LogError("load file: %s cost time %lld ms", fileName.c_str(), getCurrentLocalTimeStamp() - start);
     // TODO metadata
   }
   return 0;

@@ -39,6 +39,7 @@ private:
   int32_t size;
   char *fileStartPtr;
   char *curFilePtr;
+  long lastTime;
 
   ThreadSafeQueue<LineRecord *> lineQueue;
 //  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
@@ -59,6 +60,7 @@ public:
     fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
     curFilePtr = fileStartPtr;
     close(fd);
+    lastTime = getCurrentLocalTimeStamp();
   }
 
   ~LoadFileWriter() {

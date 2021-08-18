@@ -61,40 +61,6 @@ int FileSplitter::run() {
     // 第一块
     auto chunk = new FileChunk(chunkNo++, memFile, 0, end - 1, st.st_size, true);
     dstQueuePtr->enqueue(chunk);
-    /*
-    for (int i = 0; i < st.st_size; i++) {
-      int startPos = i;
-      int endPos = PerChunkSize;
-      const char *a = &memFile[endPos];
-      if (!strcmp(a, "\n")) {
-        // TODO 当前位置不是换行符号，左右同时搜索
-        int tmpLeft = endPos - 1;
-        int tmpRight = endPos + 1;
-        for (;;) {
-          const char *l = &memFile[tmpLeft];
-          if (*l == '\n') {
-            endPos = tmpLeft;
-            break;
-          }
-          const char *r = &memFile[tmpRight];
-          if (*r == '\n') {
-            endPos = tmpRight;
-            break;
-          }
-          tmpLeft--;
-          tmpRight++;
-        }
-      }
-
-      //TODO 找打了换行符号
-      FileChunk *chunk = new FileChunk(chunkNo, memFile, startPos, endPos - 1, st.st_size, i == st.st_size - 1);
-      // 发送到对应的队列中去
-      dstQueuePtr->enqueue(chunk);
-      chunkNo++;
-      // 设置下一个位置的起始
-      i = endPos;
-    }
-     */
     int64_t fileEndTime = getCurrentLocalTimeStamp();
     LogDebug("splitter deal file: %s cost time %lld,", name.c_str(), fileEndTime - fileStartTime);
   }

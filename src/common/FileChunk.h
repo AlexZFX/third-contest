@@ -19,9 +19,9 @@ public:
   TABLE_ID tableId;
 //  int idxs[4];
   string idxs;
-  int datetimeStartPos;
+  long datetimeStartPos;
   char *memFile;
-  int size;
+  long size;
 
   LineRecord() : datetimeStartPos(-1) {
   }

@@ -22,6 +22,7 @@ int LineFilter::run() {
       continue;
     }
     LogError("%s line filter get %d chunks", getTimeStr(time(nullptr)).c_str(), count);
+    long startTime = getCurrentLocalTimeStamp();
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
       FileChunk *chunk = chunks[i];
@@ -48,6 +49,7 @@ int LineFilter::run() {
         delete chunk;
       }
     }
+    LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);
 //      g_bitmapManager->doSnapshot();
   }
   return 0;

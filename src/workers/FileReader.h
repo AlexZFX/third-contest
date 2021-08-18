@@ -18,7 +18,7 @@ private:
 
   ChunkSet *m_dstChunkSet;
 
-  int dealLine(char *start, int seek);
+  long dealLine(char *start, long seek);
 
   FileChunk *m_chunk{};
 

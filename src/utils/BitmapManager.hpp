@@ -19,12 +19,7 @@ using namespace std;
 class BitmapItem {
 
 public:
-  BitmapItem(long max, std::vector<Index> indexs, int indexNum) {
-//    _max = max;
-//    _bits = new char[max + 1];
-//    memset(_bits, 0, max + 1);
-//    _index = std::move(indexs);
-//    _indexNum = indexNum;
+  BitmapItem() {
   }
 
   ~BitmapItem() {
@@ -89,13 +84,8 @@ public:
    * @param schema
    * @param table
    */
-  void registerBitmap(TABLE_ID tableId, std::vector<Index> &indexs) {
-    int total = indexs.size();
-    long max = 0;
-    for (int i = 0; i < total; i++) {
-      max += indexs[i].getMax();
-    }
-    auto item = new BitmapItem(max, indexs, total);
+  void registerBitmap(TABLE_ID tableId) {
+    auto item = new BitmapItem();
     _itemMap[tableId] = item;
   }
 
