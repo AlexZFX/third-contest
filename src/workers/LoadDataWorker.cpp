@@ -90,6 +90,13 @@ int LoadDataWorker::run() {
       LogError("load data failed , error: %s, sleep 1 and retry", m_mysql->getErr());
       usleep(100 * 1000);
     }
+
+    //    curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
+    //                to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
+    string fileIndex = fileName.substr(fileName.find_last_of('_') + 1,
+                                       fileName.size() - fileName.find_last_of('_') - 1);
+
+    metadataManager->setFinishLoadfile(tableId, atoi(fileIndex.c_str()));
     // TODO metadata
   }
   return 0;

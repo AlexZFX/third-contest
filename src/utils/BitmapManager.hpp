@@ -2,11 +2,12 @@
 #ifndef THIRD_CONTEST_BITMAPMANAGER_H
 #define THIRD_CONTEST_BITMAPMANAGER_H
 
-#include <iostream>
-#include <string>
-#include <mutex>
 #include "boost/thread/mutex.hpp"
+#include <iostream>
 #include <lib/parallel_hashmap/phmap.h>
+#include <lib/parallel_hashmap/phmap_dump.h>
+#include <mutex>
+#include <string>
 
 
 #include "common/Common.h"
@@ -18,13 +19,13 @@ using namespace std;
 
 class BitmapItem {
 
-public:
+  public:
   BitmapItem(long max, std::vector<Index> indexs, int indexNum) {
-//    _max = max;
-//    _bits = new char[max + 1];
-//    memset(_bits, 0, max + 1);
-//    _index = std::move(indexs);
-//    _indexNum = indexNum;
+    //    _max = max;
+    //    _bits = new char[max + 1];
+    //    memset(_bits, 0, max + 1);
+    //    _index = std::move(indexs);
+    //    _indexNum = indexNum;
   }
 
   ~BitmapItem() {
@@ -53,18 +54,21 @@ public:
     return m_indexSet.contains(key);
   }
 
-private:
+  const phmap::parallel_flat_hash_set<std::string, phmap::priv::hash_default_hash<string>, phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 4, boost::mutex> &getMIndexSet() const {
+    return m_indexSet;
+  }
 
+  private:
   phmap::parallel_flat_hash_set<std::string, phmap::priv::hash_default_hash<string>,
-    phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 4, boost::mutex> m_indexSet;
+                                phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 4, boost::mutex>
+          m_indexSet;
 
-public:
-
+  public:
 };
 
 
 class BitmapManager {
-private:
+  private:
   /**
    * 读写锁
    */
@@ -73,12 +77,12 @@ private:
   /**
    * bitmap 统一存储对象
    */
-  unordered_map<TABLE_ID, BitmapItem *, TABLE_ID_HASH> _itemMap;
+  phmap::flat_hash_map<TABLE_ID, BitmapItem *, TABLE_ID_HASH> _itemMap;
 
   // bitMapManager 的 snapshot
-//  stack<char *> _lastSnapshot;
+  //  stack<char *> _lastSnapshot;
 
-public:
+  public:
   BitmapManager() = default;
 
   ~BitmapManager() = default;
@@ -125,53 +129,28 @@ public:
    *
    */
   void doSnapshot() {
-//    lock.lock();
-//    long maxCharArr = 0;
-//    for (auto &item : _itemMap) {
-//      maxCharArr += item.second->getMax();
-//    }
-//
-//    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
-//    char *serialBitArr = new char[maxCharArr + 8 * 4];
-//    long pos = 0;
-//
-//    for (auto &item : _itemMap) {
-//      char *copyInfo = new char[item.second->getMax() + 3];
-//      memcpy(copyInfo + 2, item.second->getBits(), item.second->getMax());
-//      copyInfo[0] = (char) item.first;
-//      copyInfo[1] = '@';
-//      copyInfo[item.second->getMax() + 2] = '#';
-//      memcpy(serialBitArr + pos, copyInfo, item.second->getMax() + 3);
-//      pos += (item.second->getMax() + 3);
-//    }
+    lock.lock();
 
-    // 将最新的 snapshot 压到栈中
-//    _lastSnapshot.push(serialBitArr);
-//
-//    lock.unlock();
+    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
+
+    phmap::BinaryOutputArchive ar_out("./bitmap_manager.data");
+    _itemMap.dump(ar_out);
+
+    lock.unlock();
   }
 
   /**
    *
    */
-  void loadSnapshot(char *data) {
-//    long total = sizeof(*data);
-//    long prePos = 0;
-//
-//    lock.lock();
-//
-//    for (long i = 0; i < total; i++) {
-//      if (data[i] == '#') {
-//        char *tmp = new char[i - prePos];
-//        memcpy(tmp, data + prePos, i - prePos);
-//        auto id = static_cast<TABLE_ID>(tmp[0]);
-//
-//        // 加载新的 bitmap 的snapshot 到本地
-//        _itemMap[id]->setBits(tmp + 2);
-//      }
-//    }
-//
-//    lock.unlock();
+  void loadSnapshot() {
+    lock.lock();
+
+    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
+
+    phmap::BinaryInputArchive ar_in("./bitmap_manager.data");
+    _itemMap.load(ar_in);
+
+    lock.unlock();
   }
 };
 

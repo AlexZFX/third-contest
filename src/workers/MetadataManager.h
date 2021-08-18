@@ -12,6 +12,8 @@
 #include "../common/Common.h"
 #include "common/FileChunk.h"
 #include "../utils/BaseThread.h"
+#include <lib/parallel_hashmap/phmap.h>
+#include <lib/parallel_hashmap/phmap_dump.h>
 
 /**
  * 梳理一下一共需要保存的 metadata
@@ -32,13 +34,15 @@ private:
   mutable std::mutex _mutex;
   int successChunkIdFileFd;
 
+  phmap::parallel_flat_hash_map<TABLE_ID, int> finishLoadFileIndex;
+
 public:
 
   int loadFileIndex;
 
   int successChunkIndex;  // 已完成的 chunkid 号，在这之前的 chunk 都不再做任何处理
 
-  MetadataManager(/* args */) : loadFileIndex(0), successChunkIndex(0) {};
+  MetadataManager(/* args */) : loadFileIndex(0), successChunkIndex(0), finishLoadFileIndex() {};
 
   ~MetadataManager() {};
 
@@ -46,27 +50,8 @@ public:
 
   int run();
 
-  /**
-   * @brief
-   *
-   * @param chunk
-   */
-  void registerChunkMetadataIfAbsent(FileChunk *chunk);
+  void setFinishLoadfile(TABLE_ID id, int fileIndex);
 
-  /**
-   * @brief
-   *
-   * @param chunk
-   */
-  void updateChunkMetadata(FileChunk *chunk);
-
-  /**
-   * @brief Get the Chunk Metadata object
-   *
-   * @param filename
-   * @param chunkNo
-   */
-  FileChunk *getChunkMetadata(string filename, int chunkNo);
 };
 
 #endif // THIRD_CONTEST_METADATAMANAGER_H

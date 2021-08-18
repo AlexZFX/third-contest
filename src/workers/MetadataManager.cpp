@@ -3,10 +3,11 @@
 //
 
 #include "MetadataManager.h"
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
 #include <cstring>
+#include <sys/fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include "../utils/BitmapManager.hpp"
 
 /**
  * 从对应目录下面init获取元数据
@@ -52,12 +53,11 @@ bool MetadataManager::init(const std::string &path) {
   read(successChunkIdFileFd, buf, 20);
   successChunkIndex = atoi(buf);
   //
-
-
+  phmap::BinaryInputArchive ar_in("./load_finish.data");
+  finishLoadFileIndex.load(ar_in);
 
   // currentBitMap信息
-
-
+  g_bitmapManager->loadSnapshot();
 
   return true;
 }
@@ -70,14 +70,25 @@ int MetadataManager::run() {
     // 保存完成的 loaddata file 信息 （独立逻辑）
     // 认为是一个 index 信息，大于该index的需要继续load，小于的已经被load过
 
+    phmap::BinaryOutputArchive ar_out("./load_finish.data");
+    finishLoadFileIndex.dump(ar_out);
+
     // 保存 bitmap 和对应的 chunkid
+
+    g_bitmapManager->doSnapshot();
 
     // 先bitmap，再 chunkid
     // 写最新的 minChunkId
-    char buf[20] = {0};
+    char buf[40] = {0};
     sprintf(buf, "%d", successChunkIndex);
     pwrite(successChunkIndex, buf, 20, 0);
-
+    pwrite(loadFileIndex, buf, 20, 20);
   }
   return 0;
+}
+void MetadataManager::setFinishLoadfile(TABLE_ID id, int fileIndex) {
+  //  just put tableid -> max fileindex
+  finishLoadFileIndex.modify_if(id, [&fileIndex](int &val) {
+    return max(val, fileIndex);
+  });
 }
