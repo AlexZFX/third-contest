@@ -77,6 +77,7 @@ public:
 
 class LoadFileWriterMgn : public BaseThread {
 private:
+  std::mutex _mutex;
   unordered_map<TABLE_ID, LoadFileWriter *, TABLE_ID_HASH> workers;
 public:
   LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
@@ -103,6 +104,7 @@ public:
   }
 
   void doWrite(LineRecord *record) {
+//    std::lock_guard<std::mutex> guard(_mutex);
     workers[record->tableId]->write(record);
   }
 };

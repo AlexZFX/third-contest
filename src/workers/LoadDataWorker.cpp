@@ -39,7 +39,7 @@ int LoadDataWorker::run() {
         LogInfo("load data worker load finished, will exit");
         return 0;
       }
-      LogInfo("get empty file name, will continue and retry");
+//      LogInfo("get empty file name, will continue and retry");
       continue;
     }
     string tableName = fileName.substr(fileName.find_last_of(SLASH_SEPARATOR) + 1,

@@ -12,6 +12,7 @@
 #include "FileReader.h"
 #include "../utils/BitmapManager.hpp"
 #include "../utils/logger.h"
+#include "../utils/Util.h"
 
 extern unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> g_tableMap;
 extern int g_minChunkId;
@@ -31,6 +32,7 @@ int FileReader::run() {
       }
       continue;
     }
+    LogError("%s reader will deal chunk: %d", getTimeStr(time(nullptr)).c_str(), m_chunk->getChunkNo());
     if (m_chunk->getChunkNo() <= g_minChunkId) {
       delete m_chunk;
       continue;

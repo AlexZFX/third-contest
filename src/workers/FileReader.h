@@ -20,7 +20,7 @@ private:
 
   int dealLine(char *start, int seek);
 
-  FileChunk *m_chunk;
+  FileChunk *m_chunk{};
 
 public:
 
@@ -65,6 +65,7 @@ public:
     for (int i = 0; i < m_threadNum; ++i) {
       workers[i]->join();
     }
+    return 0;
   }
 
 };

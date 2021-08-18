@@ -106,28 +106,62 @@ typedef enum OPERATION {
 //                                  " FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'"
 //                                  " LINES TERMINATED BY '\\n' STARTING BY '' (i_data,i_id,i_im_id,i_name,i_price)";
 const std::string ITEM_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_ITEM +
-                                  " (i_data,i_id,i_im_id,i_name,i_price)";
+                                  " (i_data,i_id,@i_im_id,i_name,@i_price) "
+                                  "SET "
+                                  "i_im_id = NULLIF(@i_im_id,'null'),"
+                                  "i_price = NULLIF(@i_price,'null')";
 
 const std::string DISTRICT_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_DISTRICT +
-                                      " (d_city,d_id,d_name,d_next_o_id,d_state,d_street_1,d_street_2,d_tax,d_w_id,d_ytd,d_zip)";
+                                      " (d_city,d_id,d_name,@d_next_o_id,d_state,d_street_1,d_street_2,@d_tax,d_w_id,@d_ytd,d_zip) "
+                                      "SET "
+                                      "d_next_o_id = NULLIF(@d_next_o_id,'null'),"
+                                      "d_tax = NULLIF(@d_tax,'null'),"
+                                      "d_ytd = NULLIF(@d_ytd,'null')";
 
 const std::string ORDER_LINE_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_ORDERS_LINE +
-                                        " (ol_amount,ol_d_id,ol_delivery_d,ol_dist_info,ol_i_id,ol_number,ol_o_id,ol_quantity,ol_supply_w_id,ol_w_id)";
+                                        " (@ol_amount,ol_d_id,@ol_delivery_d,ol_dist_info,@ol_i_id,ol_number,ol_o_id,@ol_quantity,@ol_supply_w_id,ol_w_id)"
+                                        " SET "
+                                        "ol_amount = NULLIF(@ol_amount,'null'),"
+                                        "ol_delivery_d = NULLIF(@ol_delivery_d,'null'),"
+                                        "ol_i_id = NULLIF(@ol_i_id,'null'),"
+                                        "ol_quantity = NULLIF(@ol_quantity,'null'),"
+                                        "ol_supply_w_id = NULLIF(@ol_supply_w_id,'null')";
 
 const std::string ORDERS_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_ORDERS +
-                                    " (o_all_local,o_c_id,o_carrier_id,o_d_id,o_entry_d,o_id,o_ol_cnt,o_w_id)";
+                                    " (@o_all_local,@o_c_id,@o_carrier_id,o_d_id,@o_entry_d,o_id,@o_ol_cnt,o_w_id) "
+                                    " SET"
+                                    " o_all_local = NULLIF(@o_all_local, 'null'),"
+                                    " o_c_id = NULLIF(@o_c_id, 'null'),"
+                                    " o_carrier_id = NULLIF(@o_carrier_id, 'null'),"
+                                    " o_entry_d = NULLIF(@o_entry_d, 'null'),"
+                                    " o_ol_cnt = NULLIF(@o_ol_cnt, 'null')";
 
 const std::string STOCK_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_STOCK +
-                                   " (s_data,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_i_id,s_order_cnt,s_quantity,s_remote_cnt,s_w_id,s_ytd)";
+                                   " (s_data,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_i_id,@s_order_cnt,@s_quantity,@s_remote_cnt,s_w_id,@s_ytd)"
+                                   " SET"
+                                   " s_order_cnt = NULLIF(@s_order_cnt, 'null'),"
+                                   " s_quantity = NULLIF(@s_quantity, 'null'),"
+                                   " s_remote_cnt = NULLIF(@s_remote_cnt, 'null'),"
+                                   " s_ytd = NULLIF(@s_ytd, 'null')";
 
 const std::string WAREHOUSE_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_WAREHOUSE +
-                                       " (w_city,w_id,w_name,w_state,w_street_1,w_street_2,w_tax,w_ytd,w_zip)";
+                                       " (w_city,w_id,w_name,w_state,w_street_1,w_street_2,@w_tax,@w_ytd,w_zip)"
+                                       "SET "
+                                       "w_tax = NULLIF(@w_tax, 'null'),"
+                                       "w_ytd = NULLIF(@w_ytd, 'null')";
 
 const std::string NEW_ORDERS_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_NEW_ORDERS +
                                         " (no_d_id,no_o_id,no_w_id)";
 
 const std::string CUSTOMER_LOAD_SQL = "LOAD DATA LOCAL INFILE '%s' IGNORE INTO TABLE " + TABLE_CUSTOMER +
-                                      " (c_balance,c_city,c_credit,c_credit_lim,c_d_id,c_data,c_delivery_cnt,c_discount,c_first,c_id,c_last,c_middle,c_payment_cnt,c_phone,c_since,c_state,c_street_1,c_street_2,c_w_id,c_ytd_payment,c_zip)";
+                                      " (@c_balance,c_city,c_credit,c_credit_lim,c_d_id,c_data,@c_delivery_cnt,@c_discount,c_first,c_id,c_last,c_middle,@c_payment_cnt,c_phone,@c_since,c_state,c_street_1,c_street_2,c_w_id,@c_ytd_payment,c_zip)"
+                                      "SET "
+                                      "c_balance = NULLIF(@c_balance, 'null'),"
+                                      "c_delivery_cnt = NULLIF(@c_delivery_cnt, 'null'),"
+                                      "c_discount = NULLIF(@c_discount, 'null'),"
+                                      "c_payment_cnt = NULLIF(@c_payment_cnt, 'null'),"
+                                      "c_since = NULLIF(@c_since, 'null'),"
+                                      "c_ytd_payment = NULLIF(@c_ytd_payment, 'null')";
 
 
 /**

@@ -135,10 +135,10 @@ int main(int argc, char *argv[]) {
   //
   manager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn(8, loadDataFileNameQueue);
+  LoadDataWorkerMgn loadDataMgn(16, loadDataFileNameQueue);
   loadDataMgn.start();
   // 读文件读线程
-  FileReaderMgn fileReaderMgn(8, chunkQueue, chunkSet);
+  FileReaderMgn fileReaderMgn(16, chunkQueue, chunkSet);
   fileReaderMgn.start();
 
   LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record

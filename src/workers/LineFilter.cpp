@@ -7,6 +7,7 @@
 #include "LineFilter.h"
 #include "../utils/BitmapManager.hpp"
 #include "../workers/LoadFileWriter.h"
+#include "utils/logger.h"
 
 extern LoadFileWriterMgn *g_loadFileWriterMgn;
 extern int g_maxChunkId;
@@ -20,6 +21,7 @@ int LineFilter::run() {
       usleep(100 * 1000);
       continue;
     }
+    LogError("%s line filter get %d chunks", getTimeStr(time(nullptr)).c_str(), count);
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
       FileChunk *chunk = chunks[i];
