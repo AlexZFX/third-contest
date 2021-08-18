@@ -55,8 +55,8 @@ int FileSplitter::run() {
       ++startPos;
       auto chunk = new FileChunk(chunkNo++, memFile, startPos, endPos - 1, st.st_size, false);
       dstQueuePtr->enqueue(chunk);
+      end = startPos; // 后面set的时候会 -1
       start = end - PerChunkSize;
-      end = startPos;
     }
     // 第一块
     auto chunk = new FileChunk(chunkNo++, memFile, 0, end - 1, st.st_size, true);
