@@ -25,7 +25,6 @@
 using namespace std;
 
 DtsConf g_conf;
-ThreadPool *g_threadPool;
 unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> g_tableMap;
 BitmapManager *g_bitmapManager;
 LoadFileWriterMgn *g_loadFileWriterMgn;
@@ -150,5 +149,12 @@ int main(int argc, char *argv[]) {
 
   loadDataMgn.join();
   LogError("run finish will exit , cost: %lld, ", getCurrentLocalTimeStamp() - startTime);
+  delete g_loadFileWriterMgn;
+  delete chunkQueue;
+  delete chunkSet;
+  delete loadDataFileNameQueue;
+  for (const auto &item : g_tableMap) {
+    delete item.second;
+  }
   return 0;
 }

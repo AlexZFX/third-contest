@@ -10,14 +10,14 @@ extern DtsConf g_conf;
 int LoadFileWriter::run() {
   while (m_threadstate) {
     LineRecord *line = nullptr;
-    lineQueue->dequeue(1, line);
+    lineQueue.dequeue(1, line);
     if (line == nullptr && size > 0) {
       // 大于0则不进行等待，直接切换写文件
       switchLoadFile();
       size = 0;
       continue;
     } else if (line == nullptr) {
-      if (g_conf.dispatchLineFinish && lineQueue->empty()) {
+      if (g_conf.dispatchLineFinish && lineQueue.empty()) {
         munmap(fileStartPtr, maxFileSize);
         remove(curFileName.c_str());
         g_conf.loadFileWriteFinish = true;

@@ -40,17 +40,16 @@ private:
   char *fileStartPtr;
   char *curFilePtr;
 
-  ThreadSafeQueue<LineRecord *> *lineQueue;
+  ThreadSafeQueue<LineRecord *> lineQueue;
 //  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
   ThreadSafeQueue<std::string> *dstFileQueue;
 
 public:
 
-  LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr, ThreadSafeQueue<LineRecord *> *lineQueuePtr)
+  LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr)
     : tableName(std::move(table)), fileIndex(0),
       maxFileSize(LoadFileSize), size(0),
-      dstFileQueue(queuePtr),
-      lineQueue(lineQueuePtr) {
+      dstFileQueue(queuePtr){
     tableId = getTableIdByName(tableName);
     curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
                   to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
@@ -62,12 +61,15 @@ public:
     close(fd);
   }
 
+  ~LoadFileWriter() {
+  }
+
   int run();
 
   // 把一个处理好的line写入到文件里面
   //TODO 这里存在一个问题，最后一个数据有可能无法满足 size 的条件进而导致存在残留数据无法处理
   bool write(LineRecord *line) {
-    lineQueue->enqueue(line);
+    lineQueue.enqueue(line);
     return true;
   }
 
@@ -82,8 +84,7 @@ private:
 public:
   LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
     for (const auto &item : g_tableMap) {
-      workers[item.first] = new LoadFileWriter(item.second->getTableName(), queuePtr,
-                                               new ThreadSafeQueue<LineRecord *>());
+      workers[item.first] = new LoadFileWriter(item.second->getTableName(), queuePtr);
     }
   }
 
@@ -104,7 +105,7 @@ public:
   }
 
   void doWrite(LineRecord *record) {
-//    std::lock_guard<std::mutex> guard(_mutex);
+    std::lock_guard<std::mutex> guard(_mutex);
     workers[record->tableId]->write(record);
   }
 };
