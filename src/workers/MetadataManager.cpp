@@ -7,6 +7,7 @@
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <utils/ThreadPool.hpp>
 #include "../utils/BitmapManager.hpp"
 #include "common/DtsConf.h"
 #include "utils/Util.h"
@@ -64,6 +65,41 @@ bool MetadataManager::init(const std::string &path) {
     i = successChunkIndex;
   }
   LogInfo("successChunkIdFilePath: %s，successChunkIndex： %d", successChunkIdFilePath.c_str(), successChunkIndex);
+  // 初始化 bitMap 信息
+  {
+    long startTime = getCurrentLocalTimeStamp();
+    ThreadPool m_initPool(16);
+    std::vector<std::future<bool> > initResults;
+    std::vector<string> pkFiles;
+    getFileNames(metaPath + SLASH_SEPARATOR, pkFiles, CHUNK_PK_PREFIX);
+    initResults.reserve(pkFiles.size());
+    for (const auto &item : pkFiles) {
+      initResults.emplace_back(
+        m_initPool.enqueue([=] {
+          if (successChunkIndex < stoi(item.substr(item.find_last_of('_') + 1))) {
+            return true;
+          }
+          ifstream in(item.c_str());
+          string line;
+          while (getline(in, line)) {
+            // -3 表示 tableid & - & \n
+            if (line.size() <= 3) {
+              continue;
+            }
+            g_bitmapManager->putIfAbsent(static_cast<TABLE_ID>(stoi(line.substr(0, 1))),
+                                         line.substr(2, line.size() - 3));
+          }
+          return true;
+        }));
+    }
+    for (auto &&result: initResults) {
+      if (result.get()) {
+        continue;
+      }
+    }
+    LogError("%s init bitMapInfo cost: %lld", getTimeStr(time(nullptr)).c_str(),
+             getCurrentLocalTimeStamp() - startTime);
+  }
   // 记录当前待 load 的文件信息，文件的 index 需要从这里开始增长
   string waitLoadFileIndexPath = metaPath + SLASH_SEPARATOR + WaitLoadFileIndex;
   LogInfo("waitLoadFileIndexPath: %s", waitLoadFileIndexPath.c_str());

@@ -16,7 +16,9 @@ extern int g_maxChunkId;
 extern DtsConf g_conf;
 
 int LineFilter::run() {
+  char *buf = new char[PerChunkSize / 2]{0};
   while (m_threadstate) {
+    int bufOff = 0;
     FileChunk *chunks[SET_DEFAULT_CAPACITY];
     int count = m_chunkQueue->getAndEraseNext(chunks);
     if (count == 0) {
@@ -32,8 +34,15 @@ int LineFilter::run() {
       for (int j = chunk->m_lines.size() - 1; j >= 0; --j) {
         auto line = chunk->m_lines[j];
         auto tableId = line->tableId;
-        // 实际上Bitmap只在这里出现过写操作，而 LineFilter 又是一个单线程的处理操作，因此这里可以直接调用BitmapManager的doSnapshot操作
-        if (!g_bitmapManager->putIfAbsent(tableId, line->idxs) || line->operation == OPERATION::DELETE_OPERATION) {
+
+        if (!g_bitmapManager->putIfAbsent(tableId, line->idxs)) {
+          delete line;
+          continue;
+        }
+        // 需要记录下来
+        int n = snprintf(buf + bufOff, PerChunkSize / 2 - bufOff, "%d-%s\n", tableId, line->idxs.c_str());
+        bufOff += n;
+        if (line->operation == OPERATION::DELETE_OPERATION) {
           delete line; // 这个东西得及时处理掉
           continue;
         }
@@ -56,7 +65,21 @@ int LineFilter::run() {
       }
       if (curChunkId == g_maxChunkId) {
         g_conf.dispatchLineFinish = true;
+        delete[]buf;
         return 0;
+      }
+      // 该chunk的pk信息落盘
+      {
+        startTime = getCurrentLocalTimeStamp();
+        string path =
+          g_conf.outputDir + SLASH_SEPARATOR + META_DIR + SLASH_SEPARATOR + CHUNK_PK_PREFIX + to_string(curChunkId);
+        char *addr = (char *) pmem_map_file(path.c_str(), bufOff, PMEM_FILE_CREATE, 0666, nullptr, nullptr);
+        memcpy(addr, buf, bufOff);
+        pmem_unmap(addr, bufOff);
+        memset(buf, 0, PerChunkSize / 2);
+        bufOff = 0;
+        LogError("%s: %s persist cost %lld", getTimeStr(time(nullptr)).c_str(), path.c_str(),
+                 getCurrentLocalTimeStamp() - startTime);
       }
 //      startTime = getCurrentLocalTimeStamp();
 //      // 这里是 chunkId 和其 bitMap 的强对应关系，init 的时候取对应最接近小于 minSuccess 的 chunkId
@@ -67,6 +90,7 @@ int LineFilter::run() {
     }
     LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);
   }
+  delete[]buf;
   return 0;
 }
 

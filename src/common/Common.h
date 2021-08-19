@@ -27,7 +27,7 @@ const std::string SINK_FILE_NAME_TEMPLATE = "tianchi_dts_sink_data_";           
 //                                                   "stock", "warehouse"};
 const std::string LOAD_FILE_DIR = "load_file_dir";
 const std::string META_DIR = "meta_dir";
-const std::string BITMAP_PREFIX = "bitmapmanager_";
+const std::string CHUNK_PK_PREFIX = "chunkpk_";
 
 const std::string TABLE_WAREHOUSE = "warehouse";
 const std::string TABLE_DISTRICT = "district";
