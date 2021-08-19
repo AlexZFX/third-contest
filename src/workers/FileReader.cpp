@@ -21,18 +21,23 @@ extern DtsConf g_conf;
 
 
 int FileReader::run() {
+  int lastChunkId = 0;
   while (m_threadstate) {
     m_chunk = nullptr;
     m_chunkQueuePtr->dequeue(1, m_chunk);
     long startTime = getCurrentLocalTimeStamp();
     if (m_chunk == nullptr) {
-      // TODO read end return
+      // read end return
+      if (lastChunkId == g_maxChunkId) {
+        g_conf.readerFinish = true;
+      }
       if (g_conf.readerFinish) {
         // 读完了退出reader了
         break;
       }
       continue;
     }
+    lastChunkId = m_chunk->getChunkNo();
     if (m_chunk->getChunkNo() <= g_minChunkId) {
       delete m_chunk;
       continue;

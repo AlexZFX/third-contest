@@ -60,6 +60,11 @@ public:
     return count;
   };
 
+  bool empty() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    return m_chunkSet.empty();
+  }
+
 };
 
 

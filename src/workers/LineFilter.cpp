@@ -22,6 +22,11 @@ int LineFilter::run() {
     FileChunk *chunks[SET_DEFAULT_CAPACITY];
     int count = m_chunkQueue->getAndEraseNext(chunks);
     if (count == 0) {
+      if (g_conf.readerFinish && m_chunkQueue->empty()) {
+        g_conf.dispatchLineFinish = true;
+        delete[]buf;
+        return 0;
+      }
       usleep(100 * 1000);
       continue;
     }
