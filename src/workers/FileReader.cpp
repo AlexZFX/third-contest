@@ -114,6 +114,7 @@ long FileReader::dealLine(char *start, long seek) {
       ++pos;
       ++seek;
     }
+    tmpEnd = pos;
     if (*pos == '\t') {
       ++pos; // \t
       ++seek;
@@ -121,9 +122,8 @@ long FileReader::dealLine(char *start, long seek) {
       // 文件尾
       break;
     }
-    tmpEnd = pos;
     if (table->columns[columnIndex].isPk) {
-      idx.append(string(tmpStart, tmpEnd - tmpStart - 1)).append("-");
+      idx.append(string(tmpStart, tmpEnd - tmpStart)).append("-");
     } else if (table->columns[columnIndex].getDataType() == MYSQL_TYPE_DATETIME) {
       timeSeek = tmpStart - columnStart; // 记录一下对应的 time 所在的位置，每个表只有一个列，所以这就记录一次
     }
