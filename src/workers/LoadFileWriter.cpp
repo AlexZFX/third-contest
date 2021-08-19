@@ -51,7 +51,8 @@ void LoadFileWriter::switchLoadFile() {
   if (size == 0) {
     return;
   }
-  munmap(fileStartPtr, size);
+//  munmap(fileStartPtr, size);
+  pmem_unmap(fileStartPtr, size);
   truncate(curFileName.c_str(), size);
   LogError("%s make load file: %s cost: %lld, fileSize: %d", getTimeStr(time(nullptr)).c_str(), curFileName.c_str(),
            getCurrentLocalTimeStamp() - lastTime, size);
@@ -64,7 +65,11 @@ void LoadFileWriter::switchLoadFile() {
   int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
   lseek(fd, maxFileSize, SEEK_END);
   ::write(fd, "", 1);
-  fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
+//  fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
+  size_t mappedLen;
+  int isPmem;
+  fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
+                                                   &mappedLen, &isPmem));
   curFilePtr = fileStartPtr;
   close(fd);
   // PERSIST

@@ -54,12 +54,11 @@ bool MetadataManager::init(const std::string &path) {
   // 初始化元数据信息
   // maxSuccessChunkId
   string successChunkIdFilePath = metaPath + SLASH_SEPARATOR + SuccessChunkIdName;
-  LogInfo("chunkIdFilePath: %s", successChunkIdFilePath.c_str());
   successChunkIdFileFd = open(successChunkIdFilePath.c_str(), O_CREAT | O_RDWR, 0666);
   char buf[20]{0};
   read(successChunkIdFileFd, buf, 20);
   successChunkIndex = atoi(buf); // 这个 id 相当于 重启的时候的 minChunkIndex值
-
+  LogInfo("chunkIdFilePath: %s，successChunkIndex： %d", successChunkIdFilePath.c_str(), successChunkIndex);
   // 记录当前待 load 的文件信息，文件的 index 需要从这里开始增长
   string waitLoadFileIndexPath = metaPath + SLASH_SEPARATOR + WaitLoadFileIndex;
   LogInfo("waitLoadFileIndexPath: %s", waitLoadFileIndexPath.c_str());
@@ -69,13 +68,18 @@ bool MetadataManager::init(const std::string &path) {
   memcpy(loadFileIndex, loadFileIndexBuf, sizeof(int) * 8);
   // 提前过滤，不在 loadWorker 里过滤，避免导致数据缺失
   std::vector<std::string> existLoadFiles;
+  string loadFileIndexStr;
+  for (int j = 0; j < 8; ++j) {
+    loadFileIndexStr.append(to_string(loadFileIndex[j])).append("-");
+  }
+  LogError("loadFileIndexStr : %s", loadFileIndexStr.c_str());
   getFileNames(g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR, existLoadFiles);
   // 判断还需要加载的就给到load队列里面去
   for (const auto &fileName : existLoadFiles) {
     int tableId = stoi(
       fileName.substr(fileName.find_last_of('/') + 1, fileName.find_last_of('_') - fileName.find_last_of('/') - 1));
     int idx = stoi(fileName.substr(fileName.find_last_of('_') + 1));
-    if (idx <= loadFileIndex[tableId]) {
+    if (idx <= loadFileIndex[tableId - 1]) {
       g_loadDataFileNameQueue->enqueue(fileName);
     }
   }
@@ -106,7 +110,7 @@ bool MetadataManager::init(const std::string &path) {
       i = successChunkIndex;
     }
   }
-
+  LogError("%s finally init successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
   // currentBitMap信息
   std::string bitMapFileName;
   if (!bitMapFileName.empty()) {

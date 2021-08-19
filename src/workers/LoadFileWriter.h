@@ -19,6 +19,7 @@
 #include "MetadataManager.h"
 #include "boost/lockfree/spsc_queue.hpp"
 #include "common/DtsConf.h"
+#include "libpmem.h"
 
 using namespace std;
 
@@ -60,7 +61,11 @@ public:
     int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);// 先不 close
     lseek(fd, maxFileSize, SEEK_END);
     ::write(fd, "", 1);
-    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
+//    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
+    size_t mappedLen;
+    int isPmem;
+    fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
+                                                     &mappedLen, &isPmem));
     curFilePtr = fileStartPtr;
     close(fd);
     lastTime = getCurrentLocalTimeStamp();

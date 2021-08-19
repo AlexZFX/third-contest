@@ -8,7 +8,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fsanitize=address -g3")
 
 set(CMAKE_CXX_STANDARD 11)
 set(VERSION 0.0.1)
-
 set(MYSQL_SOURCE_DIR /Users/alexfxzhang/repos/cpp/mysql-8.0.23)
 set(MYSQL_INCLUDE_DIR
         ${MYSQL_SOURCE_DIR}
@@ -25,7 +24,7 @@ set(MYSQL_LIB_DIR
         )
 
 #add_executable(dts demo.cpp workers/line_filter.cpp workers/line_filter.h workers/file_reader.cpp workers/file_reader.h utils/Util.h workers/file_split.cpp workers/file_split.h )
-include_directories(./ ./lib ${MYSQL_INCLUDE_DIR})
+include_directories(./ ./lib ./lib/pmdk ${MYSQL_INCLUDE_DIR})
 link_directories(${MYSQL_LIB_DIR})
 
 

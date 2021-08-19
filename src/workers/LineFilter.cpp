@@ -8,6 +8,8 @@
 #include "../utils/BitmapManager.hpp"
 #include "../workers/LoadFileWriter.h"
 #include "utils/logger.h"
+#include <libpmem.h>
+
 
 extern LoadFileWriterMgn *g_loadFileWriterMgn;
 extern int g_maxChunkId;
