@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
   for (int j : g_metadataManager.fileSuccessLoadChunk) {
     fileSuccessLoadChunkStr.append(to_string(j)).append("-");
   }
-  LogError("loadFileIndexStr : %s", fileSuccessLoadChunkStr.c_str());
+  LogError("fileSuccessLoadChunkStr : %s", fileSuccessLoadChunkStr.c_str());
   delete g_loadFileWriterMgn;
   delete chunkQueue;
   delete chunkSet;

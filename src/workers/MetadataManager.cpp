@@ -87,7 +87,7 @@ bool MetadataManager::init(const std::string &path) {
               continue;
             }
             g_bitmapManager->putIfAbsent(static_cast<TABLE_ID>(stoi(line.substr(0, 1))),
-                                         line.substr(2, line.size() - 3));
+                                         line.substr(2, line.size() - 2));
           }
           return true;
         }));
@@ -139,14 +139,12 @@ int MetadataManager::run() {
     memcpy(loadFileIndexBuf, loadFileIndex, sizeof(int) * 8);
     pwrite(waitLoadFileIndexFileFd, loadFileIndexBuf, sizeof(int) * 8, 0);
     // 保存 bitmap 和对应的 chunkid
-    // 这个的执行转交给 lineFilter 自己去做看一看
-    // 先bitmap，再 chunkid
     // 写最新的 minChunkId
     string fileSuccessLoadChunkStr;
     for (int j : fileSuccessLoadChunk) {
       fileSuccessLoadChunkStr.append(to_string(j)).append("-");
     }
-    LogError("loadFileIndexStr : %s", fileSuccessLoadChunkStr.c_str());
+    LogError("fileSuccessLoadChunk : %s", fileSuccessLoadChunkStr.c_str());
     successChunkIndex = *min_element(fileSuccessLoadChunk, fileSuccessLoadChunk + 8);
     LogError("%s current successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
     char buf[20] = {0};

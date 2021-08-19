@@ -65,9 +65,9 @@ void LoadFileWriter::switchLoadFile() {
   int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
   lseek(fd, maxFileSize, SEEK_END);
   ::write(fd, "", 1);
-  fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
-//  fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
-//                                                   nullptr, nullptr));
+//  fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
+  fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
+                                                   nullptr, nullptr));
   curFilePtr = fileStartPtr;
   close(fd);
   // PERSIST
