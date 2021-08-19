@@ -58,7 +58,12 @@ bool MetadataManager::init(const std::string &path) {
   char buf[20]{0};
   read(successChunkIdFileFd, buf, 20);
   successChunkIndex = atoi(buf); // 这个 id 相当于 重启的时候的 minChunkIndex值
-  LogInfo("chunkIdFilePath: %s，successChunkIndex： %d", successChunkIdFilePath.c_str(), successChunkIndex);
+  g_minChunkId = successChunkIndex;
+  // 把这些也更新掉，避免后续写成 0 了
+  for (int &i : fileSuccessLoadChunk) {
+    i = successChunkIndex;
+  }
+  LogInfo("successChunkIdFilePath: %s，successChunkIndex： %d", successChunkIdFilePath.c_str(), successChunkIndex);
   // 记录当前待 load 的文件信息，文件的 index 需要从这里开始增长
   string waitLoadFileIndexPath = metaPath + SLASH_SEPARATOR + WaitLoadFileIndex;
   LogInfo("waitLoadFileIndexPath: %s", waitLoadFileIndexPath.c_str());
@@ -83,41 +88,7 @@ bool MetadataManager::init(const std::string &path) {
       g_loadDataFileNameQueue->enqueue(fileName);
     }
   }
-  // 根据 chunkid 信息，让bitMap 初始化
-  std::vector<std::string> bitMapSnapshotFiles;
-  getFileNames(g_conf.outputDir + SLASH_SEPARATOR + META_DIR, bitMapSnapshotFiles, BITMAP_PREFIX);
-  sort(bitMapSnapshotFiles.begin(), bitMapSnapshotFiles.end(), [](const string &s1, const string &s2) {
-    int ns1 = atoi(s1.substr(s1.find_last_of('_') + 1).c_str());
-    int ns2 = atoi(s2.substr(s2.find_last_of('_') + 1).c_str());
-    return ns1 < ns2;
-  });
-  string minFileName;
-  for (const auto &fileName : bitMapSnapshotFiles) {
-    if (stoi(fileName.substr(fileName.find_last_of('_') + 1)) <= successChunkIndex) {
-      minFileName = fileName;
-    } else {
-      break;
-    }
-  }
-  if (!minFileName.empty()) {
-    successChunkIndex = stoi(minFileName.substr(minFileName.find_last_of('_') + 1));
-    // 初始化对应的 bitMap
-    g_bitmapManager->loadSnapshot(minFileName);
-    // 修改最小的 chunkId 信息
-    g_minChunkId = successChunkIndex;
-    // 把这些也更新掉，避免后续写成 0 了
-    for (int &i : fileSuccessLoadChunk) {
-      i = successChunkIndex;
-    }
-  }
   LogError("%s finally init successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
-  // currentBitMap信息
-  std::string bitMapFileName;
-  if (!bitMapFileName.empty()) {
-    // 获取到最应该被加载的 bitMap
-    g_bitmapManager->loadSnapshot(bitMapFileName);
-  }
-
   return true;
 }
 

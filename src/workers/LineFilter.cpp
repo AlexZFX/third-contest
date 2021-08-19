@@ -25,7 +25,6 @@ int LineFilter::run() {
     }
     LogError("%s line filter get %d chunks", getTimeStr(time(nullptr)).c_str(), count);
     long startTime = getCurrentLocalTimeStamp();
-    int chunkId = chunks[count - 1]->getChunkNo();
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
       FileChunk *chunk = chunks[i];
@@ -46,10 +45,6 @@ int LineFilter::run() {
       // 处理到最后一个就及时退出了
       int curChunkId = chunk->getChunkNo();
       delete chunk;
-      if (curChunkId == g_maxChunkId) {
-        g_conf.dispatchLineFinish = true;
-        return 0;
-      }
       for (int k = 0; k < 8; ++k) {
         // 存在这个表的行，则需要确认
         if (containsTableId[k]) {
@@ -59,14 +54,18 @@ int LineFilter::run() {
           g_metadataManager.fileSuccessLoadChunk[k] = curChunkId;
         }
       }
+      if (curChunkId == g_maxChunkId) {
+        g_conf.dispatchLineFinish = true;
+        return 0;
+      }
+//      startTime = getCurrentLocalTimeStamp();
+//      // 这里是 chunkId 和其 bitMap 的强对应关系，init 的时候取对应最接近小于 minSuccess 的 chunkId
+//      std::string path =
+//        g_conf.outputDir + SLASH_SEPARATOR + META_DIR + SLASH_SEPARATOR + BITMAP_PREFIX + to_string(curChunkId);
+//      g_bitmapManager->doSnapshot(path);
+//      LogError("bitMapManager.doSnapshot:%d cost %lld", curChunkId, getCurrentLocalTimeStamp() - startTime);
     }
     LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);
-    startTime = getCurrentLocalTimeStamp();
-    // 这里是 chunkId 和其 bitMap 的强对应关系，init 的时候取对应最接近小于 minSuccess 的 chunkId
-    std::string path =
-      g_conf.outputDir + SLASH_SEPARATOR + META_DIR + SLASH_SEPARATOR + BITMAP_PREFIX + to_string(chunkId);
-    g_bitmapManager->doSnapshot(path);
-    LogError("bitMapManager.doSnapshot:%d cost %lld", chunkId, getCurrentLocalTimeStamp() - startTime);
   }
   return 0;
 }

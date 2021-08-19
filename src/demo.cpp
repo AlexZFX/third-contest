@@ -109,13 +109,13 @@ int main(int argc, char *argv[]) {
   long startTime = getCurrentLocalTimeStamp();
   g_loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
   auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
-  auto chunkSet = new ChunkSet(g_metadataManager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
   g_bitmapManager = new BitmapManager(); // 全局bitmap
   initTableMap();
   if (!g_metadataManager.init(g_conf.outputDir)) {
     LogError("metadata init failed, return -1");
     return -1;
   }
+  auto chunkSet = new ChunkSet(g_metadataManager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
   // 其他的启动全都依赖于 manager信息ok否
   std::vector<string> readFiles;
   getFileNames(g_conf.inputDir, readFiles, SOURCE_FILE_NAME_TEMPLATE);

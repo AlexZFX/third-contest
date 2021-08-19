@@ -13,6 +13,7 @@
 #include "common/Common.h"
 #include "entity/Index.h"
 #include "parallel_hashmap/phmap.h"
+#include "logger.h"
 
 using namespace std;
 
@@ -111,23 +112,6 @@ public:
    */
   bool checkExistsNoLock(TABLE_ID tableId, const string &key) {
     return _itemMap[tableId]->checkExistsNoLock(key);
-  }
-
-  /**
-   *
-   */
-  void doSnapshot(const std::string &dataFile) {
-    phmap::BinaryOutputArchive ar_out(dataFile.c_str());
-    _itemMap.dump(ar_out);
-//    lock.unlock();
-  }
-
-  /**
-   * 初始化的时候由metadatamanager调用
-   */
-  void loadSnapshot(const std::string &dataFile) {
-    phmap::BinaryInputArchive ar_in(dataFile.c_str());
-    _itemMap.load(ar_in);
   }
 };
 
