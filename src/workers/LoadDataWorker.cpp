@@ -99,7 +99,7 @@ int LoadDataWorker::run() {
     }
     // load 完了直接删除掉，就可以不用考虑对应的元数据了
     remove(fileName.c_str());
-    LogError("load file: %s cost time %lld ms", fileName.c_str(), getCurrentLocalTimeStamp() - start);
+//    LogError("load file: %s cost time %lld ms", fileName.c_str(), getCurrentLocalTimeStamp() - start);
   }
   return 0;
 }
