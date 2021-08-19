@@ -12,8 +12,8 @@
  * @brief 按照每个chunk 16M 进行处理
  *
  */
-const long PerChunkSize = 16 * 1024 * 1024;
-const long LoadFileSize = 8 * 1024 * 1024;
+const long PerChunkSize = 32 * 1024 * 1024;
+const long LoadFileSize = 4 * 1024 * 1024;
 
 const std::string DATABASE_NAME = "tianchi_dts_data";                                                       // 待处理数据库名，无需修改
 const std::string SCHEMA_FILE_DIR = "schema_info_dir";                                                      // schema文件夹，无需修改。

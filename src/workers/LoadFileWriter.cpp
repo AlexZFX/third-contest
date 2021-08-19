@@ -12,14 +12,14 @@ extern MetadataManager g_metadataManager;
 int LoadFileWriter::run() {
   while (m_threadstate) {
     LineRecord *line = nullptr;
-    lineQueue.dequeue(1, line);
-    if (line == nullptr && size > 0) {
+    bool get = lineQueue.wait_dequeue_timed(line, 1000);
+    if (!get && line == nullptr && size > 0) {
       // 大于0则不进行等待，直接切换写文件
       switchLoadFile();
       size = 0;
       continue;
-    } else if (line == nullptr) {
-      if (g_conf.dispatchLineFinish && lineQueue.empty()) {
+    } else if (!get && line == nullptr) {
+      if (g_conf.dispatchLineFinish && lineQueue.peek() == nullptr) {
         munmap(fileStartPtr, maxFileSize);
         remove(curFileName.c_str());
         g_conf.loadFileWriteFinish = true;
@@ -83,7 +83,7 @@ void LoadFileWriter::switchLoadFile() {
     needCheckChunkIdQueue.pop();
   }
   // 如果没有其他消息，那就把 currentChunkId 也remove掉
-  if (lineQueue.empty() && !needCheckChunkIdQueue.empty() && needCheckChunkIdQueue.front() <= currentChunkId) {
+  if (lineQueue.peek() == nullptr && !needCheckChunkIdQueue.empty() && needCheckChunkIdQueue.front() <= currentChunkId) {
     needCheckChunkIdQueue.pop();
     g_metadataManager.fileSuccessLoadChunk[static_cast<int>(tableId) - 1] = currentChunkId;
   }
@@ -123,10 +123,6 @@ char *LoadFileWriter::getFileStartPtr() const {
 
 char *LoadFileWriter::getCurFilePtr() const {
   return curFilePtr;
-}
-
-const ThreadSafeQueue<LineRecord *> &LoadFileWriter::getLineQueue() const {
-  return lineQueue;
 }
 
 ThreadSafeQueue<std::string> *LoadFileWriter::getDstFileQueue() const {

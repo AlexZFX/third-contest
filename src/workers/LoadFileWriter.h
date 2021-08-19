@@ -20,12 +20,14 @@
 #include "boost/lockfree/spsc_queue.hpp"
 #include "common/DtsConf.h"
 #include "libpmem.h"
-#include <unordered_set>
+#include "readerwriterqueue/readerwriterqueue.h"
 
 using namespace std;
 
 extern DtsConf g_conf;
 extern MetadataManager g_metadataManager;
+
+using namespace moodycamel;
 
 /**
  * 将行写到待loaddata处理的文件中
@@ -45,8 +47,8 @@ private:
   char *fileStartPtr;
   char *curFilePtr;
   long lastTime;
-
-  ThreadSafeQueue<LineRecord *> lineQueue;
+  BlockingReaderWriterQueue<LineRecord *> lineQueue;
+//  ThreadSafeQueue<LineRecord *> lineQueue;
   //  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
   ThreadSafeQueue<std::string> *dstFileQueue;
 
@@ -66,7 +68,7 @@ public:
 
   LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr)
     : tableName(std::move(table)), fileIndex(0),
-      maxFileSize(LoadFileSize), size(0),
+      maxFileSize(LoadFileSize), size(0), lineQueue(100000),
       dstFileQueue(queuePtr) {
     tableId = getTableIdByName(tableName);
     // 表里面记录的是之前已经搞完成的 fileIndex，从这个位置开始继续增长，所以这里的是 + 1，这个是为了保证，files 不会被 loader 过滤掉。
@@ -92,7 +94,9 @@ public:
   // 把一个处理好的line写入到文件里面
   //TODO 这里存在一个问题，最后一个数据有可能无法满足 size 的条件进而导致存在残留数据无法处理
   bool write(LineRecord *line) {
-    lineQueue.enqueue(line);
+    while(!lineQueue.try_enqueue(line)){
+      usleep(1000);
+    }
     return true;
   }
 
@@ -152,7 +156,7 @@ public:
   }
 
   void doWrite(LineRecord *record) {
-    std::lock_guard<std::mutex> guard(_mutex);
+//    std::lock_guard<std::mutex> guard(_mutex);
     workers[record->tableId]->write(record);
   }
 };
