@@ -39,10 +39,6 @@ public:
     return true;
   }
 
-  void put(const std::string &key) {
-    m_indexSet.insert(key);
-  }
-
   /**
    * 无锁判断某个记录是否在 bitmap 中
    *
@@ -53,9 +49,13 @@ public:
     return m_indexSet.contains(key);
   }
 
-private:
+  const phmap::parallel_flat_hash_set<std::string, phmap::priv::hash_default_hash<string>, phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 4, boost::mutex> &getMIndexSet() const {
+    return m_indexSet;
+  }
+
+  private:
   phmap::parallel_flat_hash_set<std::string, phmap::priv::hash_default_hash<string>,
-    phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 8, boost::mutex> m_indexSet;
+    phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 4, boost::mutex> m_indexSet;
 
 public:
 
@@ -71,9 +71,7 @@ private:
   /**
    * bitmap 统一存储对象
    */
-//  phmap::flat_hash_map<TABLE_ID, BitmapItem *> _itemMap;
-
-  BitmapItem *bitItems[8];
+  phmap::flat_hash_map<TABLE_ID, BitmapItem *> _itemMap;
 
   // bitMapManager 的 snapshot
 //  stack<char *> _lastSnapshot;
@@ -91,7 +89,7 @@ public:
    */
   void registerBitmap(TABLE_ID tableId) {
     auto item = new BitmapItem();
-    bitItems[static_cast<int>(tableId) - 1] = item;
+    _itemMap[tableId] = item;
   }
 
   /**
@@ -103,23 +101,18 @@ public:
    * @return
    */
   bool putIfAbsent(TABLE_ID tableId, const string &key) {
-    BitmapItem *item = bitItems[static_cast<int>(tableId) - 1];
+    BitmapItem *item = _itemMap[tableId];
     return item->putIfAbsent(key);
   }
 
   /**
-   * 判断对应的 line 是否已经存在
+   * 判断对应的 line 是否已经存在，不加锁
    * @param tableIds
    * @return
    */
   bool checkExistsNoLock(TABLE_ID tableId, const string &key) {
-    return bitItems[static_cast<int>(tableId) - 1]->checkExistsNoLock(key);
+    return _itemMap[tableId]->checkExistsNoLock(key);
   }
-
-  void put(TABLE_ID tableId, const string &key) {
-    bitItems[static_cast<int>(tableId) - 1]->put(key);
-  }
-
 };
 
 extern BitmapManager *g_bitmapManager;

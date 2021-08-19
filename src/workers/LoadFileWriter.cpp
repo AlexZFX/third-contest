@@ -54,8 +54,8 @@ void LoadFileWriter::switchLoadFile() {
   munmap(fileStartPtr, size);
 //  pmem_unmap(fileStartPtr, size);
   truncate(curFileName.c_str(), size);
-//  LogError("%s make load file: %s cost: %lld, fileSize: %d", getTimeStr(time(nullptr)).c_str(), curFileName.c_str(),
-//           getCurrentLocalTimeStamp() - lastTime, size);
+  LogError("%s make load file: %s cost: %lld, fileSize: %d", getTimeStr(time(nullptr)).c_str(), curFileName.c_str(),
+           getCurrentLocalTimeStamp() - lastTime, size);
   lastTime = getCurrentLocalTimeStamp();
   // 文件进队，待 load
   dstFileQueue->enqueue(curFileName);

@@ -65,11 +65,11 @@ int FileSplitter::run() {
     auto chunk = new FileChunk(chunkNo++, memFile, 0, end - 1, st.st_size, true);
     dstQueuePtr->enqueue(chunk);
     int64_t fileEndTime = getCurrentLocalTimeStamp();
-//    LogDebug("splitter deal file: %s cost time %lld,", name.c_str(), fileEndTime - fileStartTime);
+    LogDebug("splitter deal file: %s cost time %lld,", name.c_str(), fileEndTime - fileStartTime);
   }
   // 记录下最大的chunkNo
   g_maxChunkId = chunkNo - 1;
-//  int64_t endTime = getCurrentLocalTimeStamp();
-//  LogDebug("split all file cost time %lld, max chunk id: %d", endTime - startTime, g_maxChunkId);
+  int64_t endTime = getCurrentLocalTimeStamp();
+  LogDebug("split all file cost time %lld, max chunk id: %d", endTime - startTime, g_maxChunkId);
   return 0;
 }

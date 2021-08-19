@@ -46,8 +46,8 @@ int FileReader::run() {
     while (!m_dstChunkSet->insert(m_chunk)) {
       usleep(200 * 1000);
     }
-//    LogError("%s reader deal chunk: %d cost: %lld", getTimeStr(time(nullptr)).c_str(), m_chunk->getChunkNo(),
-//             getCurrentLocalTimeStamp() - startTime);
+    LogError("%s reader deal chunk: %d cost: %lld", getTimeStr(time(nullptr)).c_str(), m_chunk->getChunkNo(),
+             getCurrentLocalTimeStamp() - startTime);
     if (m_chunk->getChunkNo() == g_maxChunkId) {
       g_conf.readerFinish = true;
     }

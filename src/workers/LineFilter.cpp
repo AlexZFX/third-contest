@@ -30,7 +30,7 @@ int LineFilter::run() {
       usleep(100 * 1000);
       continue;
     }
-//    LogError("%s line filter get %d chunks", getTimeStr(time(nullptr)).c_str(), count);
+    LogError("%s line filter get %d chunks", getTimeStr(time(nullptr)).c_str(), count);
     long startTime = getCurrentLocalTimeStamp();
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
@@ -74,7 +74,6 @@ int LineFilter::run() {
         return 0;
       }
       // 该chunk的pk信息落盘
-      // 看日志里这个时间并不长
       {
         startTime = getCurrentLocalTimeStamp();
         string path =
@@ -84,8 +83,8 @@ int LineFilter::run() {
         pmem_unmap(addr, bufOff);
         memset(buf, 0, PerChunkSize / 2);
         bufOff = 0;
-//        LogError("%s: %s persist cost %lld", getTimeStr(time(nullptr)).c_str(), path.c_str(),
-//                 getCurrentLocalTimeStamp() - startTime);
+        LogError("%s: %s persist cost %lld", getTimeStr(time(nullptr)).c_str(), path.c_str(),
+                 getCurrentLocalTimeStamp() - startTime);
       }
 //      startTime = getCurrentLocalTimeStamp();
 //      // 这里是 chunkId 和其 bitMap 的强对应关系，init 的时候取对应最接近小于 minSuccess 的 chunkId
@@ -94,7 +93,7 @@ int LineFilter::run() {
 //      g_bitmapManager->doSnapshot(path);
 //      LogError("bitMapManager.doSnapshot:%d cost %lld", curChunkId, getCurrentLocalTimeStamp() - startTime);
     }
-//    LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);
+    LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);
   }
   delete[]buf;
   return 0;

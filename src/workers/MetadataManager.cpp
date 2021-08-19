@@ -68,7 +68,7 @@ bool MetadataManager::init(const std::string &path) {
   // 初始化 bitMap 信息
   {
     long startTime = getCurrentLocalTimeStamp();
-    ThreadPool m_initPool(32);
+    ThreadPool m_initPool(16);
     std::vector<std::future<bool> > initResults;
     std::vector<string> pkFiles;
     getFileNames(metaPath + SLASH_SEPARATOR, pkFiles, CHUNK_PK_PREFIX);
@@ -86,7 +86,7 @@ bool MetadataManager::init(const std::string &path) {
             if (line.size() <= 3) {
               continue;
             }
-            g_bitmapManager->put(static_cast<TABLE_ID>(stoi(line.substr(0, 1))),
+            g_bitmapManager->putIfAbsent(static_cast<TABLE_ID>(stoi(line.substr(0, 1))),
                                          line.substr(2, line.size() - 2));
           }
           return true;
@@ -102,6 +102,7 @@ bool MetadataManager::init(const std::string &path) {
   }
   // 记录当前待 load 的文件信息，文件的 index 需要从这里开始增长
   string waitLoadFileIndexPath = metaPath + SLASH_SEPARATOR + WaitLoadFileIndex;
+  LogInfo("waitLoadFileIndexPath: %s", waitLoadFileIndexPath.c_str());
   waitLoadFileIndexFileFd = open(waitLoadFileIndexPath.c_str(), O_CREAT | O_RDWR, 0666);
   char loadFileIndexBuf[sizeof(int) * 8]{0};
   read(waitLoadFileIndexFileFd, loadFileIndexBuf, sizeof(int) * 8);
@@ -143,9 +144,9 @@ int MetadataManager::run() {
     for (int j : fileSuccessLoadChunk) {
       fileSuccessLoadChunkStr.append(to_string(j)).append("-");
     }
-//    LogError("fileSuccessLoadChunk : %s", fileSuccessLoadChunkStr.c_str());
+    LogError("fileSuccessLoadChunk : %s", fileSuccessLoadChunkStr.c_str());
     successChunkIndex = *min_element(fileSuccessLoadChunk, fileSuccessLoadChunk + 8);
-//    LogError("%s current successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
+    LogError("%s current successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
     char buf[20] = {0};
     sprintf(buf, "%d", successChunkIndex);
     pwrite(successChunkIdFileFd, buf, 20, 0);
