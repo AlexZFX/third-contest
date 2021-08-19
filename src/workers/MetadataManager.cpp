@@ -144,7 +144,8 @@ int MetadataManager::run() {
     LogError("%s current successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
     char buf[20] = {0};
     sprintf(buf, "%d", successChunkIndex);
-    pwrite(successChunkIndex, buf, 20, 0);
+    pwrite(successChunkIdFileFd, buf, 20, 0);
+
     fsync(waitLoadFileIndexFileFd);
     fsync(successChunkIdFileFd);
     fsync(successLoadFileNameFileFd);
