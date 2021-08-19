@@ -17,8 +17,8 @@ class LineRecord {
 public:
   OPERATION operation{};
   TABLE_ID tableId;
-//  int idxs[4];
   string idxs;
+  int chunkId;
   long datetimeStartPos;
   char *memFile;
   long size;

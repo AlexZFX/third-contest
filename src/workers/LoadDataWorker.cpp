@@ -8,8 +8,10 @@
 #include <cstdlib>
 #include <unistd.h>
 #include "common/Common.h"
+#include "workers/MetadataManager.h"
 
 extern DtsConf g_conf;
+extern MetadataManager g_metadataManager;
 
 
 using namespace std;
@@ -32,13 +34,18 @@ bool LoadDataWorker::init() {
 
 int LoadDataWorker::run() {
   while (m_threadstate) {
-    string fileName = "";
+    string fileName;
     m_queuePtr->dequeue(1, fileName);
     if (fileName.empty()) {
       if (g_conf.loadFileWriteFinish) {
         LogInfo("load data worker load finished, will exit");
         return 0;
       }
+      continue;
+    }
+    // 过滤掉已经加载过的 fileSet
+    if (g_metadataManager.m_successLoadFileSet.contains(
+      fileName.substr((fileName.find_last_of(SLASH_SEPARATOR) + 1)))) {
       continue;
     }
     string tableName = fileName.substr(fileName.find_last_of(SLASH_SEPARATOR) + 1,
@@ -90,15 +97,9 @@ int LoadDataWorker::run() {
       LogError("load data failed , error: %s, sleep 1 and retry", m_mysql->getErr());
       usleep(100 * 1000);
     }
+    // load 完了直接删除掉，就可以不用考虑对应的元数据了
+    remove(fileName.c_str());
     LogError("load file: %s cost time %lld ms", fileName.c_str(), getCurrentLocalTimeStamp() - start);
-    // TODO metadata
-
-    //    curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
-    //                to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
-    string fileIndex = fileName.substr(fileName.find_last_of('_') + 1,
-                                       fileName.size() - fileName.find_last_of('_') - 1);
-
-    metadataManager->setFinishLoadfile(tableId, atoi(fileIndex.c_str()));
   }
   return 0;
 }

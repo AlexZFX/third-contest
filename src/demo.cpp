@@ -28,8 +28,10 @@ DtsConf g_conf;
 unordered_map<TABLE_ID, Table *, TABLE_ID_HASH> g_tableMap;
 BitmapManager *g_bitmapManager;
 LoadFileWriterMgn *g_loadFileWriterMgn;
+MetadataManager g_metadataManager;
 int g_maxChunkId = INT32_MAX;
 int g_minChunkId = 0;
+ThreadSafeQueue<string> *g_loadDataFileNameQueue;
 
 
 /**
@@ -105,16 +107,14 @@ int main(int argc, char *argv[]) {
   cout << "[Start]\tload and clean data." << endl;
   // load 的过程中进行数据清洗
   long startTime = getCurrentLocalTimeStamp();
-  MetadataManager manager;
-  if (!manager.init(g_conf.outputDir)) {
-    LogError("metadata init failed, return -1");
-    return -1;
-  }
+  g_loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
+  auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
+  auto chunkSet = new ChunkSet(g_metadataManager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
   g_bitmapManager = new BitmapManager(); // 全局bitmap
   initTableMap();
-  for (const auto &item : g_tableMap) {
-    g_conf.dealCounts[item.first] = 0;
-    g_conf.afterCounts[item.first] = 0;
+  if (!g_metadataManager.init(g_conf.outputDir)) {
+    LogError("metadata init failed, return -1");
+    return -1;
   }
   // 其他的启动全都依赖于 manager信息ok否
   std::vector<string> readFiles;
@@ -125,26 +125,22 @@ int main(int argc, char *argv[]) {
     int ns2 = atoi(s2.substr(s2.find_last_of('_') + 1).c_str());
     return ns1 > ns2;
   });
-  auto chunkQueue = new ThreadSafeQueue<FileChunk *>(); // splitter 的 dstQueue
-  auto chunkSet = new ChunkSet(manager.successChunkIndex); // read 完的 queue，bitManager 的前置queue
-  auto loadDataFileNameQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
-  auto loadDataFinishQueue = new ThreadSafeQueue<string>(); // 待 load 文件的queue
   // 后续 splitter 是可以优化掉的，只在第一次启动的时候run，后续重启不需要再run一遍，只要记录下来就行
   FileSplitter splitter(readFiles, chunkQueue);
   splitter.start();
   //
-  manager.start();
+  g_metadataManager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn(16, loadDataFileNameQueue, loadDataFinishQueue);
+  LoadDataWorkerMgn loadDataMgn(32, g_loadDataFileNameQueue);
   loadDataMgn.start();
   // 读文件读线程
-  FileReaderMgn fileReaderMgn(16, chunkQueue, chunkSet);
+  FileReaderMgn fileReaderMgn(12, chunkQueue, chunkSet);
   fileReaderMgn.start();
 
   LineFilter lineFilter(chunkSet); // 单线程的filter，过滤record
   lineFilter.start();
 
-  g_loadFileWriterMgn = new LoadFileWriterMgn(loadDataFileNameQueue, &manager);
+  g_loadFileWriterMgn = new LoadFileWriterMgn(g_loadDataFileNameQueue);
   g_loadFileWriterMgn->start();
 
 
@@ -153,7 +149,7 @@ int main(int argc, char *argv[]) {
   delete g_loadFileWriterMgn;
   delete chunkQueue;
   delete chunkSet;
-  delete loadDataFileNameQueue;
+  delete g_loadDataFileNameQueue;
   for (const auto &item : g_tableMap) {
     delete item.second;
   }

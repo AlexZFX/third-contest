@@ -16,7 +16,6 @@
 
 using namespace std;
 
-
 class BitmapItem {
 
 public:
@@ -68,11 +67,10 @@ private:
    * 读写锁
    */
   std::mutex lock;
-
   /**
    * bitmap 统一存储对象
    */
-  phmap::flat_hash_map<TABLE_ID, BitmapItem *, TABLE_ID_HASH> _itemMap;
+  phmap::flat_hash_map<TABLE_ID, BitmapItem *> _itemMap;
 
   // bitMapManager 的 snapshot
 //  stack<char *> _lastSnapshot;
@@ -118,29 +116,18 @@ public:
   /**
    *
    */
-  void doSnapshot() {
-    lock.lock();
-
-    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
-
-    phmap::BinaryOutputArchive ar_out("./bitmap_manager.data");
+  void doSnapshot(const std::string &dataFile) {
+    phmap::BinaryOutputArchive ar_out(dataFile.c_str());
     _itemMap.dump(ar_out);
-
-    lock.unlock();
+//    lock.unlock();
   }
 
   /**
-   *
+   * 初始化的时候由metadatamanager调用
    */
-  void loadSnapshot() {
-    lock.lock();
-
-    // 这里将所有的 bitmap 数据存放在一个 char* 数组中，单个 bitmap 元素的格式 => TABLE_ID@[bitmap data], 每个 bitmap 之间的数据 => [bitmap item]#[bitmap item]
-
-    phmap::BinaryInputArchive ar_in("./bitmap_manager.data");
+  void loadSnapshot(const std::string &dataFile) {
+    phmap::BinaryInputArchive ar_in(dataFile.c_str());
     _itemMap.load(ar_in);
-
-    lock.unlock();
   }
 };
 

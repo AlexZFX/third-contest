@@ -23,6 +23,7 @@
 using namespace std;
 
 extern DtsConf g_conf;
+extern MetadataManager g_metadataManager;
 
 /**
  * 将行写到待loaddata处理的文件中
@@ -30,7 +31,7 @@ extern DtsConf g_conf;
  * 初步先实现成文件线性处理，后续可以优化成多线程并发
  */
 class LoadFileWriter : public BaseThread {
-  private:
+private:
   int currentChunkId;
   string curFileName;
   string tableName;
@@ -46,12 +47,14 @@ class LoadFileWriter : public BaseThread {
   //  boost::lockfree::spsc_queue <LineRecord *> *lineQueue;
   ThreadSafeQueue<std::string> *dstFileQueue;
 
-  public:
+public:
   LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr)
-      : tableName(std::move(table)), fileIndex(0),
-        maxFileSize(LoadFileSize), size(0),
-        dstFileQueue(queuePtr) {
+    : tableName(std::move(table)), fileIndex(0),
+      maxFileSize(LoadFileSize), size(0),
+      dstFileQueue(queuePtr) {
     tableId = getTableIdByName(tableName);
+    // 表里面记录的是之前已经搞完成的 fileIndex，从这个位置开始继续增长，所以这里的是 + 1，这个是为了保证，files 不会被 loader 过滤掉。
+    fileIndex = g_metadataManager.loadFileIndex[static_cast<int>(tableId) - 1] + 1;
     curFileName = g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR + SLASH_SEPARATOR +
                   to_string(static_cast<int>(tableId)) + "_" + to_string(fileIndex);
     int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);// 先不 close
@@ -76,31 +79,37 @@ class LoadFileWriter : public BaseThread {
   }
 
   int getCurrentChunkId() const;
+
   const string &getCurFileName() const;
+
   const string &getTableName() const;
+
   TABLE_ID getTableId() const;
+
   int getFileIndex() const;
+
   int32_t getMaxFileSize() const;
+
   int32_t getSize() const;
+
   char *getFileStartPtr() const;
+
   char *getCurFilePtr() const;
+
   const ThreadSafeQueue<LineRecord *> &getLineQueue() const;
+
   ThreadSafeQueue<std::string> *getDstFileQueue() const;
-  MetadataManager *getMetadataMgn() const;
 
   void switchLoadFile();
 };
 
 class LoadFileWriterMgn : public BaseThread {
-  private:
-  int preSnapshotChunkID;
+private:
   std::mutex _mutex;
   unordered_map<TABLE_ID, LoadFileWriter *, TABLE_ID_HASH> workers;
-  MetadataManager *_metadataMgn;
 
-  public:
-  LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr, MetadataManager *metadataMgn) {
-    _metadataMgn = metadataMgn;
+public:
+  LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
     for (const auto &item : g_tableMap) {
       workers[item.first] = new LoadFileWriter(item.second->getTableName(), queuePtr);
     }
@@ -126,11 +135,6 @@ class LoadFileWriterMgn : public BaseThread {
     std::lock_guard<std::mutex> guard(_mutex);
     workers[record->tableId]->write(record);
   }
-
-  void doSnapshot();
-
-  int getPreSnapshotChunkId() const;
-  MetadataManager *getMetadataMgn() const;
 };
 
 #endif//THIRD_CONTEST_LOADFILEWRITER_H

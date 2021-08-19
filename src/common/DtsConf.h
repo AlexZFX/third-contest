@@ -24,14 +24,8 @@ public:
   bool loadFinish;
   bool dispatchLineFinish;
   bool loadFileWriteFinish;
-  int32_t orderLineCount;
 
-  unordered_map<TABLE_ID, atomic_int64_t, TABLE_ID_HASH> dealCounts;
-  unordered_map<TABLE_ID, atomic_int64_t, TABLE_ID_HASH> beforeFilterCounts;
-  unordered_map<TABLE_ID, atomic_int64_t, TABLE_ID_HASH> afterCounts;
-
-  DtsConf() : readerFinish(false), loadFinish(false), dispatchLineFinish(false), loadFileWriteFinish(false),
-              orderLineCount(0) {
+  DtsConf() : readerFinish(false), loadFinish(false), dispatchLineFinish(false), loadFileWriteFinish(false) {
 
   }
 

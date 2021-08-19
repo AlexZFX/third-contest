@@ -23,19 +23,18 @@ int LineFilter::run() {
     }
     LogError("%s line filter get %d chunks", getTimeStr(time(nullptr)).c_str(), count);
     long startTime = getCurrentLocalTimeStamp();
+    int chunkId = chunks[count - 1]->getChunkNo();
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
       FileChunk *chunk = chunks[i];
       for (int j = chunk->m_lines.size() - 1; j >= 0; --j) {
         auto line = chunk->m_lines[j];
         auto tableId = line->tableId;
-        g_conf.beforeFilterCounts[tableId] += 1;
         // 实际上Bitmap只在这里出现过写操作，而 LineFilter 又是一个单线程的处理操作，因此这里可以直接调用BitmapManager的doSnapshot操作
         if (!g_bitmapManager->putIfAbsent(tableId, line->idxs) || line->operation == OPERATION::DELETE_OPERATION) {
           delete line; // 这个东西得及时处理掉
           continue;
         }
-        g_conf.afterCounts[tableId] += 1;
         // 把 line 给到 loadFileWriter
         // push to dst queue
         g_loadFileWriterMgn->doWrite(line);
@@ -50,7 +49,12 @@ int LineFilter::run() {
       }
     }
     LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);
-//      g_bitmapManager->doSnapshot();
+    startTime = getCurrentLocalTimeStamp();
+    // 这里是 chunkId 和其 bitMap 的强对应关系，init 的时候取对应最接近小于 minSuccess 的 chunkId
+    std::string path =
+      g_conf.outputDir + SLASH_SEPARATOR + META_DIR + SLASH_SEPARATOR + BITMAP_PREFIX + to_string(chunkId);
+    g_bitmapManager->doSnapshot(path);
+    LogError("bitMapManager.doSnapshot:%d cost %lld", chunkId, getCurrentLocalTimeStamp() - startTime);
   }
   return 0;
 }

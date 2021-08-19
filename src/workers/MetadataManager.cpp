@@ -8,6 +8,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "../utils/BitmapManager.hpp"
+#include "common/DtsConf.h"
+#include "utils/Util.h"
+#include "utils/ThreadSafeQueue.h"
+
+extern DtsConf g_conf;
+extern int g_minChunkId;
+extern ThreadSafeQueue<string> *g_loadDataFileNameQueue;
 
 /**
  * 从对应目录下面init获取元数据
@@ -49,46 +56,90 @@ bool MetadataManager::init(const std::string &path) {
   string successChunkIdFilePath = metaPath + SLASH_SEPARATOR + SuccessChunkIdName;
   LogInfo("chunkIdFilePath: %s", successChunkIdFilePath.c_str());
   successChunkIdFileFd = open(successChunkIdFilePath.c_str(), O_CREAT | O_RDWR, 0666);
-  char buf[20];
+  char buf[20]{0};
   read(successChunkIdFileFd, buf, 20);
-  successChunkIndex = atoi(buf);
-  //
-  phmap::BinaryInputArchive ar_in("./load_finish.data");
-  finishLoadFileIndex.load(ar_in);
+  successChunkIndex = atoi(buf); // 这个 id 相当于 重启的时候的 minChunkIndex值
+
+  // 记录当前待 load 的文件信息，文件的 index 需要从这里开始增长
+  string waitLoadFileIndexPath = metaPath + SLASH_SEPARATOR + WaitLoadFileIndex;
+  LogInfo("waitLoadFileIndexPath: %s", waitLoadFileIndexPath.c_str());
+  waitLoadFileIndexFileFd = open(waitLoadFileIndexPath.c_str(), O_CREAT | O_RDWR, 0666);
+  char loadFileIndexBuf[sizeof(int) * 8]{0};
+  read(waitLoadFileIndexFileFd, loadFileIndexBuf, sizeof(int) * 8);
+  memcpy(loadFileIndex, loadFileIndexBuf, sizeof(int) * 8);
+  // 提前过滤，不在 loadWorker 里过滤，避免导致数据缺失
+  std::vector<std::string> existLoadFiles;
+  getFileNames(g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR, existLoadFiles);
+  // 判断还需要加载的就给到load队列里面去
+  for (const auto &fileName : existLoadFiles) {
+    int tableId = stoi(
+      fileName.substr(fileName.find_last_of('/') + 1, fileName.find_last_of('_') - fileName.find_last_of('/') - 1));
+    int idx = stoi(fileName.substr(fileName.find_last_of('_') + 1));
+    if (idx <= loadFileIndex[tableId]) {
+      g_loadDataFileNameQueue->enqueue(fileName);
+    }
+  }
+  // 根据 chunkid 信息，让bitMap 初始化
+  std::vector<std::string> bitMapSnapshotFiles;
+  getFileNames(g_conf.outputDir + SLASH_SEPARATOR + META_DIR, bitMapSnapshotFiles, BITMAP_PREFIX);
+  sort(bitMapSnapshotFiles.begin(), bitMapSnapshotFiles.end(), [](const string &s1, const string &s2) {
+    int ns1 = atoi(s1.substr(s1.find_last_of('_') + 1).c_str());
+    int ns2 = atoi(s2.substr(s2.find_last_of('_') + 1).c_str());
+    return ns1 < ns2;
+  });
+  string minFileName;
+  for (const auto &fileName : bitMapSnapshotFiles) {
+    if (stoi(fileName.substr(fileName.find_last_of('_') + 1)) <= successChunkIndex) {
+      minFileName = fileName;
+    } else {
+      break;
+    }
+  }
+  if (!minFileName.empty()) {
+    successChunkIndex = stoi(minFileName.substr(minFileName.find_last_of('_') + 1));
+    // 初始化对应的 bitMap
+    g_bitmapManager->loadSnapshot(minFileName);
+    // 修改最小的 chunkId 信息
+    g_minChunkId = successChunkIndex;
+    // 把这些也更新掉，避免后续写成 0 了
+    for (int &i : fileSuccessLoadChunk) {
+      i = successChunkIndex;
+    }
+  }
 
   // currentBitMap信息
-  g_bitmapManager->loadSnapshot();
+  std::string bitMapFileName;
+  if (!bitMapFileName.empty()) {
+    // 获取到最应该被加载的 bitMap
+    g_bitmapManager->loadSnapshot(bitMapFileName);
+  }
 
   return true;
 }
 
 int MetadataManager::run() {
   while (m_threadstate) {
-    usleep(500 * 1000);
+    usleep(1000 * 1000);
     // 保存元数据前要加锁禁止其他线程更新对应元数据
     std::lock_guard<std::mutex> lock(_mutex);
     // 保存完成的 loaddata file 信息 （独立逻辑）
     // 认为是一个 index 信息，大于该index的需要继续load，小于的已经被load过
-
-    phmap::BinaryOutputArchive ar_out("./load_finish.data");
-    finishLoadFileIndex.dump(ar_out);
-
+    char loadFileIndexBuf[sizeof(int) * 8]{0};
+    memcpy(loadFileIndexBuf, loadFileIndex, sizeof(int) * 8);
+    pwrite(waitLoadFileIndexFileFd, loadFileIndexBuf, sizeof(int) * 8, 0);
     // 保存 bitmap 和对应的 chunkid
-
-    g_bitmapManager->doSnapshot();
-
+    // 这个的执行转交给 lineFilter 自己去做看一看
     // 先bitmap，再 chunkid
     // 写最新的 minChunkId
-    char buf[40] = {0};
+    successChunkIndex = *min_element(fileSuccessLoadChunk, fileSuccessLoadChunk + 8);
+    LogError("%s current successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
+    char buf[20] = {0};
     sprintf(buf, "%d", successChunkIndex);
     pwrite(successChunkIndex, buf, 20, 0);
-    pwrite(loadFileIndex, buf, 20, 20);
+    fsync(waitLoadFileIndexFileFd);
+    fsync(successChunkIdFileFd);
+    fsync(successLoadFileNameFileFd);
   }
   return 0;
 }
-void MetadataManager::setFinishLoadfile(TABLE_ID id, int fileIndex) {
-  //  just put tableid -> max fileindex
-  finishLoadFileIndex.modify_if(id, [&fileIndex](int &val) {
-    return max(val, fileIndex);
-  });
-}
+

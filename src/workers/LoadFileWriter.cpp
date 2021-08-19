@@ -4,8 +4,10 @@
 
 #include "LoadFileWriter.h"
 #include "utils/logger.h"
+#include "workers/MetadataManager.h"
 
 extern DtsConf g_conf;
+extern MetadataManager g_metadataManager;
 
 int LoadFileWriter::run() {
   while (m_threadstate) {
@@ -25,9 +27,7 @@ int LoadFileWriter::run() {
       }
       continue;
     }
-    if (line->tableId == TABLE_ID::TABLE_ORDERS_LINE_ID) {
-      ++g_conf.orderLineCount;
-    }
+    currentChunkId = line->chunkId;
     if (size + line->size >= maxFileSize) {
       switchLoadFile();
     }
@@ -55,6 +55,7 @@ void LoadFileWriter::switchLoadFile() {
   truncate(curFileName.c_str(), size);
   LogError("%s make load file: %s cost: %lld, fileSize: %d", getTimeStr(time(nullptr)).c_str(), curFileName.c_str(),
            getCurrentLocalTimeStamp() - lastTime, size);
+  lastTime = getCurrentLocalTimeStamp();
   // 文件进队，待 load
   dstFileQueue->enqueue(curFileName);
   fileIndex++;
@@ -66,53 +67,54 @@ void LoadFileWriter::switchLoadFile() {
   fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
   curFilePtr = fileStartPtr;
   close(fd);
-  // PERSISTz
-
-
+  // PERSIST
+  // 这里就保存待 load 的 index 进入到 meta，同时更新其对应的 chunkIndex
+  g_metadataManager.fileSuccessLoadChunk[static_cast<int>(tableId) - 1] = currentChunkId - 1;
+  // 这里保存的 fileIndex，是已经成功落盘了没问题的
+  g_metadataManager.loadFileIndex[static_cast<int>(tableId) - 1] = fileIndex - 1;
   size = 0;
 }
+
 int LoadFileWriter::getCurrentChunkId() const {
   return currentChunkId;
 }
+
 const string &LoadFileWriter::getCurFileName() const {
   return curFileName;
 }
+
 const string &LoadFileWriter::getTableName() const {
   return tableName;
 }
+
 TABLE_ID LoadFileWriter::getTableId() const {
   return tableId;
 }
+
 int LoadFileWriter::getFileIndex() const {
   return fileIndex;
 }
+
 int32_t LoadFileWriter::getMaxFileSize() const {
   return maxFileSize;
 }
+
 int32_t LoadFileWriter::getSize() const {
   return size;
 }
+
 char *LoadFileWriter::getFileStartPtr() const {
   return fileStartPtr;
 }
+
 char *LoadFileWriter::getCurFilePtr() const {
   return curFilePtr;
 }
+
 const ThreadSafeQueue<LineRecord *> &LoadFileWriter::getLineQueue() const {
   return lineQueue;
 }
+
 ThreadSafeQueue<std::string> *LoadFileWriter::getDstFileQueue() const {
   return dstFileQueue;
-}
-
-void LoadFileWriterMgn::doSnapshot() {
-  int minChunkID = INT32_MAX;
-  for (auto &worker : workers) {
-    int id = worker.second->getCurrentChunkId();
-    minChunkID = min(minChunkID, id);
-  }
-  _metadataMgn->successChunkIndex = minChunkID;
-}
-MetadataManager *LoadFileWriterMgn::getMetadataMgn() const {
-  return _metadataMgn;
 }

@@ -39,7 +39,7 @@ int FileReader::run() {
     }
     readChunk(m_chunk);
     while (!m_dstChunkSet->insert(m_chunk)) {
-      usleep(100 * 1000);
+      usleep(200 * 1000);
     }
     LogError("%s reader deal chunk: %d cost: %lld", getTimeStr(time(nullptr)).c_str(), m_chunk->getChunkNo(),
              getCurrentLocalTimeStamp() - startTime);
@@ -127,7 +127,6 @@ long FileReader::dealLine(char *start, long seek) {
 //  ++pos; // \n
   // 读完了这一行，看看是否需要放到chunk的栈里面
   // 提前检验一次 pk 是否已经被处理过
-  g_conf.dealCounts[tableId] += 1;
   if (g_bitmapManager->checkExistsNoLock(tableId, idx)) { // 存在的话直接返回不需要处理了
     return pos - start + 1;
   }
@@ -135,7 +134,7 @@ long FileReader::dealLine(char *start, long seek) {
   //设置本行 line 对应的 TableID
   line->tableId = tableId;
   //设置本行line对应的 chunkId 信息
-//  line->chunkId = m_chunk->getChunkNo();
+  line->chunkId = m_chunk->getChunkNo();
   line->idxs = std::move(idx);
   //设置本行 line 的起始位置地址
   line->memFile = columnStart;

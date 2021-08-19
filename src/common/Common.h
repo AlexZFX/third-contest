@@ -27,6 +27,7 @@ const std::string SINK_FILE_NAME_TEMPLATE = "tianchi_dts_sink_data_";           
 //                                                   "stock", "warehouse"};
 const std::string LOAD_FILE_DIR = "load_file_dir";
 const std::string META_DIR = "meta_dir";
+const std::string BITMAP_PREFIX = "bitmapmanager_";
 
 const std::string TABLE_WAREHOUSE = "warehouse";
 const std::string TABLE_DISTRICT = "district";
@@ -55,6 +56,21 @@ struct TABLE_ID_HASH {
     return static_cast<std::size_t>(t);
   }
 };
+
+namespace std
+{
+  template<>
+  struct hash<TABLE_ID>
+  {
+    typedef TABLE_ID argument_type;
+    typedef std::size_t result_type;
+
+    result_type operator()(argument_type const& s) const {
+      return static_cast<std::size_t>(s);
+    }
+  };
+
+}
 
 inline TABLE_ID getTableIdByName(const std::string &tableName) {
   if (tableName == TABLE_WAREHOUSE) {
@@ -91,6 +107,7 @@ const char BEFORE_DATE_IMG_DESC = 'A';
 const char AFTER_DATE_IMG_DESC = 'B';
 
 const std::string LoadSuccessFileName = "loadSuccessFiles";
+const std::string WaitLoadFileIndex = "waitLoadFileIndex";
 const std::string SuccessChunkIdName = "successChunkId";
 
 

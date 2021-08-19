@@ -12,8 +12,9 @@
 #include "../common/Common.h"
 #include "common/FileChunk.h"
 #include "../utils/BaseThread.h"
-#include <lib/parallel_hashmap/phmap.h>
-#include <lib/parallel_hashmap/phmap_dump.h>
+#include <parallel_hashmap/phmap.h>
+#include <parallel_hashmap/phmap_dump.h>
+#include "boost/thread//mutex.hpp"
 
 /**
  * 梳理一下一共需要保存的 metadata
@@ -30,27 +31,36 @@
  */
 class MetadataManager : public BaseThread {
 private:
-  /* data */
   mutable std::mutex _mutex;
-  int successChunkIdFileFd;
-
-  phmap::parallel_flat_hash_map<TABLE_ID, int> finishLoadFileIndex;
+  /* data */
+  int successChunkIdFileFd{};
+  int waitLoadFileIndexFileFd{};
+  int successLoadFileNameFileFd;
+  atomic_int64_t successLoadFileNameFileOff;
 
 public:
 
-  int loadFileIndex;
+  // 当前已经被load完成的文件名，避免重复 load
+  phmap::parallel_flat_hash_set<std::string, phmap::priv::hash_default_hash<string>,
+    phmap::priv::hash_default_eq<string>, phmap::priv::Allocator<string>, 1, boost::mutex> m_successLoadFileSet;
+
+
+  int fileSuccessLoadChunk[8]{0, 0, 0, 0, 0, 0, 0, 0};
+  int loadFileIndex[8]{0, 0, 0, 0, 0, 0, 0, 0};
 
   int successChunkIndex;  // 已完成的 chunkid 号，在这之前的 chunk 都不再做任何处理
 
-  MetadataManager(/* args */) : loadFileIndex(0), successChunkIndex(0), finishLoadFileIndex() {};
+  MetadataManager(/* args */) : successChunkIndex(0) {
+  };
 
-  ~MetadataManager() {};
+  ~MetadataManager() {
+    close(successChunkIdFileFd);
+    close(waitLoadFileIndexFileFd);
+  };
 
   bool init(const std::string &path);
 
   int run();
-
-  void setFinishLoadfile(TABLE_ID id, int fileIndex);
 
 };
 
