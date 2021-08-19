@@ -51,8 +51,8 @@ void LoadFileWriter::switchLoadFile() {
   if (size == 0) {
     return;
   }
-//  munmap(fileStartPtr, size);
-  pmem_unmap(fileStartPtr, size);
+  munmap(fileStartPtr, size);
+//  pmem_unmap(fileStartPtr, size);
   truncate(curFileName.c_str(), size);
   LogError("%s make load file: %s cost: %lld, fileSize: %d", getTimeStr(time(nullptr)).c_str(), curFileName.c_str(),
            getCurrentLocalTimeStamp() - lastTime, size);
@@ -65,19 +65,28 @@ void LoadFileWriter::switchLoadFile() {
   int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
   lseek(fd, maxFileSize, SEEK_END);
   ::write(fd, "", 1);
-//  fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
-  size_t mappedLen;
-  int isPmem;
-  fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
-                                                   &mappedLen, &isPmem));
+  fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE, MAP_SHARED, fd, 0));
+//  fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
+//                                                   nullptr, nullptr));
   curFilePtr = fileStartPtr;
   close(fd);
   // PERSIST
   // 这里就保存待 load 的 index 进入到 meta，同时更新其对应的 chunkIndex
+  // 这里存在问题是，只有这个chunk有对应数据的时候，才会更新到 chunkIndex，没有的话就不会更新这个index了
   g_metadataManager.fileSuccessLoadChunk[static_cast<int>(tableId) - 1] = currentChunkId - 1;
   // 这里保存的 fileIndex，是已经成功落盘了没问题的
   g_metadataManager.loadFileIndex[static_cast<int>(tableId) - 1] = fileIndex - 1;
   size = 0;
+  // 小于这个 currentChunkId 都应该被 erase 掉
+  lock_guard<mutex> guard(_mutex);
+  while (!needCheckChunkIdQueue.empty() && needCheckChunkIdQueue.front() <= currentChunkId - 1) {
+    needCheckChunkIdQueue.pop();
+  }
+  // 如果没有其他消息，那就把 currentChunkId 也remove掉
+  if (lineQueue.empty() && !needCheckChunkIdQueue.empty() && needCheckChunkIdQueue.front() <= currentChunkId) {
+    needCheckChunkIdQueue.pop();
+    g_metadataManager.fileSuccessLoadChunk[static_cast<int>(tableId) - 1] = currentChunkId;
+  }
 }
 
 int LoadFileWriter::getCurrentChunkId() const {

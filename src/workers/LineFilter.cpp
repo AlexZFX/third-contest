@@ -29,6 +29,7 @@ int LineFilter::run() {
     // 有序的 chunkSet
     for (int i = 0; i < count; ++i) {
       FileChunk *chunk = chunks[i];
+      bool containsTableId[8]{false};
       for (int j = chunk->m_lines.size() - 1; j >= 0; --j) {
         auto line = chunk->m_lines[j];
         auto tableId = line->tableId;
@@ -39,15 +40,24 @@ int LineFilter::run() {
         }
         // 把 line 给到 loadFileWriter
         // push to dst queue
+        containsTableId[static_cast<int>(tableId) - 1] = true;
         g_loadFileWriterMgn->doWrite(line);
       }
       // 处理到最后一个就及时退出了
-      if (chunk->getChunkNo() == g_maxChunkId) {
-        delete chunk;
+      int curChunkId = chunk->getChunkNo();
+      delete chunk;
+      if (curChunkId == g_maxChunkId) {
         g_conf.dispatchLineFinish = true;
         return 0;
-      } else {
-        delete chunk;
+      }
+      for (int k = 0; k < 8; ++k) {
+        // 存在这个表的行，则需要确认
+        if (containsTableId[k]) {
+          g_loadFileWriterMgn->workers[static_cast<TABLE_ID >(k + 1)]->insertChunkId(curChunkId);
+        } else if (g_loadFileWriterMgn->workers[static_cast<TABLE_ID >(k + 1)]->chunkIdQueueIsEmpty()) {
+          // set是空的的话，可以直接更新 metaManager
+          g_metadataManager.fileSuccessLoadChunk[k] = curChunkId;
+        }
       }
     }
     LogError("lineFilter deal %d chunk cost: %lld", count, getCurrentLocalTimeStamp() - startTime);

@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
   //
   g_metadataManager.start();
   // loadData 的线程
-  LoadDataWorkerMgn loadDataMgn(32, g_loadDataFileNameQueue);
+  LoadDataWorkerMgn loadDataMgn(24, g_loadDataFileNameQueue);
   loadDataMgn.start();
   // 读文件读线程
   FileReaderMgn fileReaderMgn(12, chunkQueue, chunkSet);
@@ -146,6 +146,11 @@ int main(int argc, char *argv[]) {
 
   loadDataMgn.join();
   LogError("run finish will exit , cost: %lld, ", getCurrentLocalTimeStamp() - startTime);
+  string fileSuccessLoadChunkStr;
+  for (int j : g_metadataManager.fileSuccessLoadChunk) {
+    fileSuccessLoadChunkStr.append(to_string(j)).append("-");
+  }
+  LogError("loadFileIndexStr : %s", fileSuccessLoadChunkStr.c_str());
   delete g_loadFileWriterMgn;
   delete chunkQueue;
   delete chunkSet;

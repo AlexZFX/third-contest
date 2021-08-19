@@ -36,16 +36,14 @@ int FileSplitter::run() {
     struct stat st{};
     int ret = fstat(fd, &st);
     // 开始进行文件 mmap 映射
-//    char *memFile = (char *) mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    size_t mappedLen;
-    int isPmem;
-    char *memFile = static_cast<char *>(pmem_map_file(name.c_str(), st.st_size, PMEM_FILE_CREATE, 0666, &mappedLen,
-                                                      &isPmem));
+    char *memFile = (char *) mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+//    char *memFile = static_cast<char *>(pmem_map_file(name.c_str(), st.st_size, PMEM_FILE_CREATE, 0444,
+//                                                      nullptr, nullptr));
     close(fd);
-    if (memFile == MAP_FAILED) {
-      // TODO 这里 mmap 失败，是否直接退出
-      LogError("[ERROR] do mmap failed");
-      return -1;
+    if (memFile == nullptr || memFile == MAP_FAILED) {
+      // TODO 这里 mmap 失败，让他继续往下走core掉
+      LogError("[ERROR] do mmap failed, error: %s", strerror(errno));
+//      return -1;
     }
     long start = st.st_size > PerChunkSize ? st.st_size - PerChunkSize : 0, end = st.st_size;
     // 从最后一块往前查找

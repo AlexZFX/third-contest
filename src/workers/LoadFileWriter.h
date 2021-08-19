@@ -20,6 +20,7 @@
 #include "boost/lockfree/spsc_queue.hpp"
 #include "common/DtsConf.h"
 #include "libpmem.h"
+#include <unordered_set>
 
 using namespace std;
 
@@ -33,6 +34,7 @@ extern MetadataManager g_metadataManager;
  */
 class LoadFileWriter : public BaseThread {
 private:
+  std::mutex _mutex;
   int currentChunkId;
   string curFileName;
   string tableName;
@@ -49,6 +51,19 @@ private:
   ThreadSafeQueue<std::string> *dstFileQueue;
 
 public:
+
+  queue<int> needCheckChunkIdQueue;
+
+  void insertChunkId(int chunkId) {
+    lock_guard<mutex> guard(_mutex);
+    needCheckChunkIdQueue.push(chunkId);
+  }
+
+  bool chunkIdQueueIsEmpty() {
+    lock_guard<mutex> guard(_mutex);
+    return needCheckChunkIdQueue.empty();
+  }
+
   LoadFileWriter(string table, ThreadSafeQueue<std::string> *queuePtr)
     : tableName(std::move(table)), fileIndex(0),
       maxFileSize(LoadFileSize), size(0),
@@ -61,11 +76,9 @@ public:
     int fd = open(curFileName.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);// 先不 close
     lseek(fd, maxFileSize, SEEK_END);
     ::write(fd, "", 1);
-//    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
-    size_t mappedLen;
-    int isPmem;
-    fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
-                                                     &mappedLen, &isPmem));
+    fileStartPtr = static_cast<char *>(mmap(nullptr, maxFileSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0));
+//    fileStartPtr = static_cast<char *>(pmem_map_file(curFileName.c_str(), maxFileSize, PMEM_FILE_CREATE, 0666,
+//                                                     nullptr, nullptr));
     curFilePtr = fileStartPtr;
     close(fd);
     lastTime = getCurrentLocalTimeStamp();
@@ -111,9 +124,11 @@ public:
 class LoadFileWriterMgn : public BaseThread {
 private:
   std::mutex _mutex;
-  unordered_map<TABLE_ID, LoadFileWriter *, TABLE_ID_HASH> workers;
 
 public:
+
+  unordered_map<TABLE_ID, LoadFileWriter *, TABLE_ID_HASH> workers;
+
   LoadFileWriterMgn(ThreadSafeQueue<std::string> *queuePtr) {
     for (const auto &item : g_tableMap) {
       workers[item.first] = new LoadFileWriter(item.second->getTableName(), queuePtr);

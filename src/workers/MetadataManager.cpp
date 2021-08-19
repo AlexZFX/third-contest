@@ -69,8 +69,8 @@ bool MetadataManager::init(const std::string &path) {
   // 提前过滤，不在 loadWorker 里过滤，避免导致数据缺失
   std::vector<std::string> existLoadFiles;
   string loadFileIndexStr;
-  for (int j = 0; j < 8; ++j) {
-    loadFileIndexStr.append(to_string(loadFileIndex[j])).append("-");
+  for (int j : loadFileIndex) {
+    loadFileIndexStr.append(to_string(j)).append("-");
   }
   LogError("loadFileIndexStr : %s", loadFileIndexStr.c_str());
   getFileNames(g_conf.outputDir + SLASH_SEPARATOR + LOAD_FILE_DIR, existLoadFiles);
@@ -135,6 +135,11 @@ int MetadataManager::run() {
     // 这个的执行转交给 lineFilter 自己去做看一看
     // 先bitmap，再 chunkid
     // 写最新的 minChunkId
+    string fileSuccessLoadChunkStr;
+    for (int j : fileSuccessLoadChunk) {
+      fileSuccessLoadChunkStr.append(to_string(j)).append("-");
+    }
+    LogError("loadFileIndexStr : %s", fileSuccessLoadChunkStr.c_str());
     successChunkIndex = *min_element(fileSuccessLoadChunk, fileSuccessLoadChunk + 8);
     LogError("%s current successChunkId: %d", getTimeStr(time(nullptr)).c_str(), successChunkIndex);
     char buf[20] = {0};
